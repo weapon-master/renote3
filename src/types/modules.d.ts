@@ -29,10 +29,23 @@ declare module 'epub2' {
     title?: string;
   }
 
+  interface EpubSpine {
+    id: string;
+    href?: string;
+  }
+
+  interface EpubManifestItem {
+    id: string;
+    href: string;
+    'media-type'?: string;
+  }
+
   class EPub {
     metadata: EpubMetadata;
     flow: EpubFlow[];
     toc: EpubToc[];
+    spine: EpubSpine[];
+    manifest: { [key: string]: EpubManifestItem };
     
     constructor(epubfile: string, imagewebroot?: string, chapterwebroot?: string);
     

@@ -181,7 +181,7 @@ const BookShelf: React.FC = () => {
   }, []);
 
   const handleBookSelect = (book: Book) => {
-    navigate(`/reader/${book.id}`);
+    navigate(`/reader/${encodeURIComponent(book.id)}`);
   };
 
   if (isLoading) {

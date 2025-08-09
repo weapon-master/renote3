@@ -73,7 +73,13 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.on('ready', () => {
+  // 注册EPUB相关的IPC处理器
+  registerEpubHandlers();
+  
+  // 创建主窗口
+  createWindow();
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -425,6 +431,212 @@ ipcMain.handle('update-book', async (event, bookId: string, updates: any) => {
     return { success: false, error: error.message };
   }
 });
+
+// 注册EPUB相关的IPC处理器
+function registerEpubHandlers() {
+  // 读取EPUB文件内容
+  ipcMain.handle('read-epub-content', async (event, filePath: string) => {
+    console.log('EPUB内容读取请求:', filePath);
+    try {
+      // 检查文件是否存在
+      await fs.promises.access(filePath, fs.constants.F_OK);
+      console.log('文件存在，开始解析EPUB...');
+      
+      // 读取EPUB文件内容
+      const epub = new EPub(filePath);
+      await epub.parse();
+      console.log('EPUB解析完成，章节数量:', epub.flow.length);
+      
+      // 调试EPUB结构
+      console.log('EPUB flow 内容:', JSON.stringify(epub.flow, null, 2));
+      console.log('EPUB spine 内容:', JSON.stringify(epub.spine, null, 2));
+      console.log('EPUB manifest 内容:', JSON.stringify(epub.manifest, null, 2));
+      console.log('EPUB 所有属性:', Object.keys(epub));
+      
+      // 尝试不同的章节获取方法
+      let chapters = [];
+      
+      // 方法1: 使用 spine (这是EPUB的标准章节顺序)
+      if (epub.spine && epub.spine.length > 0) {
+        console.log('使用 spine 方法获取章节...');
+        for (const item of epub.spine) {
+          if (item.id) {
+            try {
+              console.log('正在读取spine章节:', item.id);
+              const content = await new Promise<string>((resolve, reject) => {
+                epub.getChapterRaw(item.id, (err, text) => {
+                  if (err) reject(err);
+                  else resolve(text);
+                });
+              });
+              chapters.push({
+                id: item.id,
+                title: `Chapter ${chapters.length + 1}`,
+                href: '',
+                content: content
+              });
+            } catch (err) {
+              console.warn(`无法读取spine章节 ${item.id}:`, err);
+            }
+          }
+        }
+      }
+      
+      // 方法2: 使用 flow
+      if (chapters.length === 0 && epub.flow && epub.flow.length > 0) {
+        console.log('使用 flow 方法获取章节...');
+        for (const chapter of epub.flow) {
+          if (chapter.id && chapter.href) {
+            try {
+              console.log('正在读取章节:', chapter.id, chapter.title);
+              const content = await new Promise<string>((resolve, reject) => {
+                epub.getChapterRaw(chapter.id, (err, text) => {
+                  if (err) reject(err);
+                  else resolve(text);
+                });
+              });
+              chapters.push({
+                id: chapter.id,
+                title: chapter.title || chapter.id,
+                href: chapter.href,
+                content: content
+              });
+            } catch (err) {
+              console.warn(`无法读取章节 ${chapter.id}:`, err);
+            }
+          }
+        }
+      }
+      
+      // 方法3: 尝试使用目录
+      if (chapters.length === 0) {
+        console.log('尝试使用目录方法...');
+        try {
+          const toc = epub.toc || [];
+          console.log('目录内容:', JSON.stringify(toc, null, 2));
+          
+          if (toc && toc.length > 0) {
+            for (const item of toc) {
+              if (item.id) {
+                try {
+                  console.log('正在读取目录章节:', item.id, item.title);
+                  const content = await new Promise<string>((resolve, reject) => {
+                    epub.getChapterRaw(item.id, (err, text) => {
+                      if (err) reject(err);
+                      else resolve(text);
+                    });
+                  });
+                  chapters.push({
+                    id: item.id,
+                    title: item.title || item.id,
+                    href: item.href || '',
+                    content: content
+                  });
+                } catch (err) {
+                  console.warn(`无法读取目录章节 ${item.id}:`, err);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('无法获取目录:', err);
+        }
+      }
+      
+      // 方法4: 尝试从manifest获取所有HTML文件
+      if (chapters.length === 0 && epub.manifest) {
+        console.log('尝试从manifest获取章节...');
+        try {
+          const manifestItems = Object.values(epub.manifest);
+          const htmlItems = manifestItems.filter((item) => 
+            item['media-type'] === 'application/xhtml+xml' || 
+            item.href && item.href.endsWith('.html') ||
+            item.href && item.href.endsWith('.xhtml')
+          );
+          
+          console.log('找到HTML项目:', htmlItems.length);
+          
+          for (const item of htmlItems) {
+            if (item.id) {
+              try {
+                console.log('正在读取manifest章节:', item.id, item.href);
+                const content = await new Promise<string>((resolve, reject) => {
+                  epub.getChapterRaw(item.id, (err, text) => {
+                    if (err) reject(err);
+                    else resolve(text);
+                  });
+                });
+                chapters.push({
+                  id: item.id,
+                  title: item.href || item.id,
+                  href: item.href || '',
+                  content: content
+                });
+              } catch (err) {
+                console.warn(`无法读取manifest章节 ${item.id}:`, err);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('从manifest获取章节失败:', err);
+        }
+      }
+      
+      // 方法5: 尝试直接获取所有可能的章节ID
+      if (chapters.length === 0) {
+        console.log('尝试直接获取章节...');
+        try {
+          // 尝试一些常见的章节ID
+          const possibleIds = ['chapter1', 'chapter-1', 'ch1', 'ch-1', 'section1', 'section-1'];
+          
+          for (const id of possibleIds) {
+            try {
+              console.log('尝试读取章节ID:', id);
+              const content = await new Promise<string>((resolve, reject) => {
+                epub.getChapterRaw(id, (err, text) => {
+                  if (err) reject(err);
+                  else resolve(text);
+                });
+              });
+              if (content) {
+                chapters.push({
+                  id: id,
+                  title: `Chapter ${id}`,
+                  href: '',
+                  content: content
+                });
+              }
+            } catch (err) {
+              // 忽略错误，继续尝试下一个
+            }
+          }
+        } catch (err) {
+          console.warn('直接获取章节失败:', err);
+        }
+      }
+      
+      console.log('成功读取章节数量:', chapters.length);
+      return {
+        success: true,
+        metadata: {
+          title: epub.metadata.title,
+          creator: epub.metadata.creator,
+          language: epub.metadata.language,
+          identifier: epub.metadata.identifier
+        },
+        chapters: chapters
+      };
+    } catch (error) {
+      console.error('读取EPUB内容时出错:', error);
+      return { 
+        success: false, 
+        error: error.message 
+      };
+    }
+  });
+
+  console.log('EPUB IPC处理器已注册');
+}
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.

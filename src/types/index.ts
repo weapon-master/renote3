@@ -22,6 +22,24 @@ declare global {
         delete: (bookId: string) => Promise<{ success: boolean; error?: string }>;
         update: (bookId: string, updates: Partial<Book>) => Promise<{ success: boolean; error?: string }>;
       };
+      epub: {
+        readContent: (filePath: string) => Promise<{
+          success: boolean;
+          metadata?: {
+            title: string;
+            creator: string;
+            language: string;
+            identifier: string;
+          };
+          chapters?: Array<{
+            id: string;
+            title: string;
+            href: string;
+            content: string;
+          }>;
+          error?: string;
+        }>;
+      };
     };
   }
 }

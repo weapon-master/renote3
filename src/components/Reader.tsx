@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Book } from '../types';
+import EpubReader from './EpubReader';
 import '../components/Reader.css';
 
 const Reader: React.FC = () => {
@@ -82,8 +83,20 @@ const Reader: React.FC = () => {
         <h1 id="reader-title">{book.title}</h1>
       </header>
       <div id="reader-content">
-        <p>书籍 "{book.title}" 的内容将显示在这里。</p>
-        <p>文件路径: {book.filePath}</p>
+        {book.filePath.toLowerCase().endsWith('.epub') ? (
+          <EpubReader book={book} />
+        ) : (
+          <div className="unsupported-format">
+            <p>📖 书籍 "{book.title}" 的内容将显示在这里。</p>
+            <p>文件路径: {book.filePath}</p>
+            <p className="format-info">
+              当前文件格式: {book.filePath.split('.').pop()?.toUpperCase()}
+            </p>
+            <p className="support-info">
+              目前支持 EPUB 格式的阅读。其他格式将在后续版本中支持。
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

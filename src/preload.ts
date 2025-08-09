@@ -31,6 +31,13 @@ contextBridge.exposeInMainWorld('electron', {
     save: (books: any[]) => ipcRenderer.invoke('save-books', books),
     delete: (bookId: string) => ipcRenderer.invoke('delete-book', bookId),
     update: (bookId: string, updates: any) => ipcRenderer.invoke('update-book', bookId, updates)
+  },
+  // EPUB阅读API
+  epub: {
+    readContent: (filePath: string) => {
+      console.log('Preload: 调用EPUB readContent:', filePath);
+      return ipcRenderer.invoke('read-epub-content', filePath);
+    }
   }
 });
 
