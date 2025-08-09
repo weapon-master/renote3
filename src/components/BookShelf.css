@@ -2,6 +2,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 20px;
-  flex: 1;
+  padding: 20px 0;
+  align-content: start;
+  justify-content: center;
+  min-height: fit-content;
   overflow-y: auto;
+  max-width: 100%;
 }

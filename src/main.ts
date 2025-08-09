@@ -328,7 +328,7 @@ ipcMain.on('import-books', async (event, args) => {
         }
         
         books.push({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${filePath}`,
           title: metadata.title,
           coverPath: metadata.cover,
           filePath: filePath,

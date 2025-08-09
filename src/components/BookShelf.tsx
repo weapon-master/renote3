@@ -28,11 +28,18 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
       // Fallback for demonstration without Electron
       console.warn('Electron integration not available, using mock data');
       const newBook: Book = {
-        id: Date.now().toString(),
+        id: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         title: `新书籍 ${books.length + 1}`,
         filePath: `/path/to/newbook${books.length + 1}.epub`
       };
-      setBooks([...books, newBook]);
+      
+      // 检查是否已经存在相同的书籍
+      const existingBook = books.find(book => book.title === newBook.title);
+      if (!existingBook) {
+        setBooks([...books, newBook]);
+      } else {
+        console.log('Book already exists, not adding duplicate');
+      }
     }
   };
 
@@ -70,7 +77,19 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
       console.log('IPC renderer available, setting up listener');
       const handler = (importedBooks: Book[]) => {
         console.log('Received books from main process:', importedBooks);
-        setBooks(prevBooks => [...prevBooks, ...importedBooks]);
+        setBooks(prevBooks => {
+          // 过滤掉已经存在的书籍（基于filePath）
+          const existingFilePaths = new Set(prevBooks.map(book => book.filePath));
+          const newBooks = importedBooks.filter(book => !existingFilePaths.has(book.filePath));
+          
+          if (newBooks.length > 0) {
+            console.log(`Adding ${newBooks.length} new books to shelf`);
+            return [...prevBooks, ...newBooks];
+          } else {
+            console.log('No new books to add');
+            return prevBooks;
+          }
+        });
       };
       
       electron.ipcRenderer.on('import-books-result', handler);
