@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Annotation, Book } from '../types';
 import { ReactReader } from 'react-reader';
 import './EpubReader.css';
@@ -15,6 +16,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
   const [noteDraft, setNoteDraft] = useState<string>('');
   const [showNoteModal, setShowNoteModal] = useState<boolean>(false);
   const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
 
   const epubUrl = useMemo(() => {
     if (window.electron?.epub?.getLocalFileUrl) {
@@ -49,14 +51,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       try {
         const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
         const rect = range ? range.getBoundingClientRect() : null;
-        const iframeEl: HTMLIFrameElement | null = contents.iframe || null;
+        const iframeEl: HTMLIFrameElement | null = contents.iframe || (contents?.document?.defaultView?.frameElement as HTMLIFrameElement) || null;
         if (rect && iframeEl) {
           const iframeRect = iframeEl.getBoundingClientRect();
           const padding = 8;
           const toolbarWidth = 220;
           const toolbarHeight = 40;
-          let left = iframeRect.left + rect.left + (rect.width / 2) - (toolbarWidth / 2);
-          let top = iframeRect.top + rect.top - toolbarHeight - padding;
+          let left = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
+          // Prefer above; if not enough room, place below selection
+          let topCandidate = iframeRect.top + rect.top - toolbarHeight - padding;
+          let top = topCandidate;
+          if (topCandidate < 8) {
+            top = iframeRect.top + rect.bottom + padding;
+          }
           // Clamp to viewport
           left = Math.max(8, Math.min(window.innerWidth - toolbarWidth - 8, left));
           top = Math.max(8, top);
@@ -74,6 +81,18 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     rendition.on('relocated', () => {
       setToolbarPosition(null);
     });
+
+    // Dismiss toolbar on any click inside the iframe contents
+    try {
+      rendition.on('rendered', (_section: any, contents: any) => {
+        const doc: Document | undefined = contents?.document;
+        if (!doc) return;
+        const handler = () => setToolbarPosition(null);
+        doc.addEventListener('mousedown', handler);
+        // Best-effort removal when content is destroyed
+        try { contents.on && contents.on('destroy', () => doc.removeEventListener('mousedown', handler)); } catch {}
+      });
+    } catch {}
   };
 
   useEffect(() => {
@@ -132,6 +151,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     }
   };
 
+  // Dismiss toolbar on outside clicks in the main document
+  useEffect(() => {
+    if (!toolbarPosition) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const el = toolbarRef.current;
+      if (el && e.target instanceof Node && !el.contains(e.target)) {
+        setToolbarPosition(null);
+      }
+    };
+    document.addEventListener('mousedown', onDocMouseDown, true);
+    return () => document.removeEventListener('mousedown', onDocMouseDown, true);
+  }, [toolbarPosition]);
+
   if (!epubUrl) {
     return (
       <div className="epub-error">
@@ -151,9 +183,10 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
         showToc
         getRendition={handleRendition}
       />
-      {toolbarPosition && pendingSelection && (
+      {toolbarPosition && pendingSelection && createPortal(
         <div
           className="selection-toolbar"
+          ref={toolbarRef}
           style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, width: 220 }}
         >
           <button
@@ -164,7 +197,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
             className="toolbar-btn secondary"
             onClick={() => { /* explain no-op for now */ }}
           >解释</button>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Simple note modal */}
       {showNoteModal && (
