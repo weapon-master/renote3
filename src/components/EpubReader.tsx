@@ -17,6 +17,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
   const [showNoteModal, setShowNoteModal] = useState<boolean>(false);
   const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const [notePopup, setNotePopup] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
 
   const epubUrl = useMemo(() => {
     if (window.electron?.epub?.getLocalFileUrl) {
@@ -80,6 +81,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     // Hide toolbar when relocating (page change)
     rendition.on('relocated', () => {
       setToolbarPosition(null);
+      setNotePopup(null);
     });
 
     // Dismiss toolbar on any click inside the iframe contents
@@ -87,7 +89,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       rendition.on('rendered', (_section: any, contents: any) => {
         const doc: Document | undefined = contents?.document;
         if (!doc) return;
-        const handler = () => setToolbarPosition(null);
+        const handler = () => { setToolbarPosition(null); setNotePopup(null); };
         doc.addEventListener('mousedown', handler);
         // Best-effort removal when content is destroyed
         try { contents.on && contents.on('destroy', () => doc.removeEventListener('mousedown', handler)); } catch {}
@@ -111,9 +113,39 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     } catch {}
     anns.forEach((a) => {
       try {
-        rendition.annotations.add('highlight', a.cfiRange, {}, undefined, 'epub-highlight');
+        rendition.annotations.add(
+          'highlight',
+          a.cfiRange,
+          {},
+          (e: any) => handleHighlightClick(e, a),
+          'epub-highlight'
+        );
       } catch {}
     });
+  };
+
+  const handleHighlightClick = (e: any, annotation: Annotation) => {
+    try {
+      const targetEl = (e?.target as HTMLElement) || null;
+      const rect = targetEl ? targetEl.getBoundingClientRect() : null;
+      const iframeEl: HTMLIFrameElement | null = (targetEl?.ownerDocument?.defaultView?.frameElement as HTMLIFrameElement) || null;
+      if (rect && iframeEl) {
+        const iframeRect = iframeEl.getBoundingClientRect();
+        const padding = 6;
+        const popupWidth = 280;
+        const popupHeight = 140;
+        let left = iframeRect.left + rect.left + rect.width / 2 - popupWidth / 2;
+        let topCandidate = iframeRect.top + rect.top - popupHeight - padding;
+        let top = topCandidate < 8 ? iframeRect.top + rect.bottom + padding : topCandidate;
+        left = Math.max(8, Math.min(window.innerWidth - popupWidth - 8, left));
+        top = Math.max(8, top);
+        setNotePopup({ top, left, annotation });
+      } else {
+        setNotePopup({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
+      }
+    } catch {
+      setNotePopup({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
+    }
   };
 
   const saveAnnotation = async () => {
@@ -164,6 +196,14 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     return () => document.removeEventListener('mousedown', onDocMouseDown, true);
   }, [toolbarPosition]);
 
+  // Dismiss note popup on outside click
+  useEffect(() => {
+    if (!notePopup) return;
+    const onDocMouseDown = () => setNotePopup(null);
+    document.addEventListener('mousedown', onDocMouseDown, true);
+    return () => document.removeEventListener('mousedown', onDocMouseDown, true);
+  }, [notePopup]);
+
   if (!epubUrl) {
     return (
       <div className="epub-error">
@@ -197,6 +237,20 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
             className="toolbar-btn secondary"
             onClick={() => { /* explain no-op for now */ }}
           >解释</button>
+        </div>,
+        document.body
+      )}
+      {notePopup && createPortal(
+        <div
+          className="note-popup"
+          style={{ position: 'fixed', top: notePopup.top, left: notePopup.left, width: 280 }}
+        >
+          <div className="note-popup-header">
+            <span>批注</span>
+            <button className="note-popup-close" onClick={() => setNotePopup(null)}>✕</button>
+          </div>
+          <div className="note-popup-text">{notePopup.annotation.text}</div>
+          <div className="note-popup-note">{notePopup.annotation.note}</div>
         </div>,
         document.body
       )}
