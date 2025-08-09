@@ -136,20 +136,69 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
 
   const handleHighlightClick = (e: any, annotation: Annotation) => {
     try {
-      const targetEl = (e?.target as HTMLElement) || null;
-      const rect = targetEl ? targetEl.getBoundingClientRect() : null;
-      const iframeEl: HTMLIFrameElement | null = (targetEl?.ownerDocument?.defaultView?.frameElement as HTMLIFrameElement) || null;
-      if (rect && iframeEl) {
-        const iframeRect = iframeEl.getBoundingClientRect();
-        const padding = 6;
-        const toolbarWidth = 280;
-        const toolbarHeight = 40;
-        let left = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
-        let topCandidate = iframeRect.top + rect.top - toolbarHeight - padding;
-        let top = topCandidate < 8 ? iframeRect.top + rect.bottom + padding : topCandidate;
-        left = Math.max(8, Math.min(window.innerWidth - toolbarWidth - 8, left));
-        top = Math.max(8, top);
-        setClickToolbar({ top, left, annotation });
+      // Find the actual highlight element to position above
+      const rawTarget = (e?.target as Node) || null;
+      const elementTarget: HTMLElement | null = (rawTarget && (rawTarget.nodeType === 1 ? (rawTarget as HTMLElement) : (rawTarget.parentElement))) || null;
+      const ownerDoc: Document | null = elementTarget ? elementTarget.ownerDocument : null;
+      let highlightEl: HTMLElement | null = null;
+      if (elementTarget && typeof elementTarget.closest === 'function') {
+        highlightEl = elementTarget.closest('.epubjs-hl, .epub-highlight') as HTMLElement | null;
+      }
+      if (!highlightEl && ownerDoc) {
+        // Fallback: query by CFI on known attributes
+        const selectors = [
+          `.epubjs-hl[data-epubcfi="${annotation.cfiRange}"]`,
+          `.epub-highlight[data-epubcfi="${annotation.cfiRange}"]`,
+          `.epubjs-hl[data-cfi="${annotation.cfiRange}"]`,
+          `.epub-highlight[data-cfi="${annotation.cfiRange}"]`,
+        ];
+        for (const sel of selectors) {
+          const el = ownerDoc.querySelector(sel) as HTMLElement | null;
+          if (el) { highlightEl = el; break; }
+        }
+      }
+      const rect = highlightEl ? highlightEl.getBoundingClientRect() : (elementTarget ? elementTarget.getBoundingClientRect() : null);
+      const iframeEl: HTMLIFrameElement | null = ownerDoc ? (ownerDoc.defaultView?.frameElement as HTMLIFrameElement) : null;
+      const padding = 6;
+      const toolbarWidth = 280;
+      const toolbarHeight = 40;
+      if (rect) {
+        // Strategy A: rect is relative to iframe viewport → add iframe offsets
+        let leftA = 0; let topA = 0; let validA = false;
+        if (iframeEl) {
+          const iframeRect = iframeEl.getBoundingClientRect();
+          leftA = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
+          const topCandidateA = iframeRect.top + rect.top - toolbarHeight - padding;
+          topA = topCandidateA < 8 ? iframeRect.top + rect.bottom + padding : topCandidateA;
+          validA = true;
+        }
+        // Strategy B: rect is already in global viewport → use directly
+        let leftB = rect.left + rect.width / 2 - toolbarWidth / 2;
+        const topCandidateB = rect.top - toolbarHeight - padding;
+        let topB = topCandidateB < 8 ? rect.bottom + padding : topCandidateB;
+        // Clamp both
+        const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+        if (validA) {
+          leftA = clamp(leftA, 8, window.innerWidth - toolbarWidth - 8);
+          topA = clamp(topA, 8, window.innerHeight - toolbarHeight - 8);
+        }
+        leftB = clamp(leftB, 8, window.innerWidth - toolbarWidth - 8);
+        topB = clamp(topB, 8, window.innerHeight - toolbarHeight - 8);
+        // Choose the candidate that requires less clamping (more natural)
+        const score = (l: number, t: number, baseL: number, baseT: number) => Math.abs(l - baseL) + Math.abs(t - baseT);
+        const baseLA = validA ? (iframeEl!.getBoundingClientRect().left + rect.left + rect.width / 2 - toolbarWidth / 2) : Infinity;
+        const baseTA = validA ? (iframeEl!.getBoundingClientRect().top + rect.top - toolbarHeight - padding) : Infinity;
+        const baseLB = rect.left + rect.width / 2 - toolbarWidth / 2;
+        const baseTB = rect.top - toolbarHeight - padding;
+        let useA = validA;
+        if (validA) {
+          const sA = score(leftA, topA, baseLA, baseTA);
+          const sB = score(leftB, topB, baseLB, baseTB);
+          useA = sA <= sB;
+        }
+        const finalLeft = validA && useA ? leftA : leftB;
+        const finalTop = validA && useA ? topA : topB;
+        setClickToolbar({ top: finalTop, left: finalLeft, annotation });
       } else {
         setClickToolbar({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
       }
