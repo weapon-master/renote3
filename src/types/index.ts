@@ -5,6 +5,16 @@ export interface Book {
   filePath: string;
   author?: string;
   description?: string;
+  annotations?: Annotation[];
+}
+
+export interface Annotation {
+  id: string;
+  cfiRange: string;
+  text: string; // selected text snapshot
+  note: string;
+  createdAt: string; // ISO string
+  updatedAt?: string; // ISO string
 }
 
 // Electron API 类型声明

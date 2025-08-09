@@ -158,6 +158,58 @@
   color: white;
 }
 
+/* Note modal */
+.note-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.note-modal {
+  width: 520px;
+  max-width: calc(100% - 40px);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 16px;
+}
+
+.note-modal h4 {
+  margin: 0 0 8px 0;
+}
+
+.note-selected-text {
+  font-size: 13px;
+  color: #6c757d;
+  background: #f1f3f5;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.note-modal textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  outline: none;
+  resize: vertical;
+}
+
+.note-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
 .epub-loading {
   display: flex;
   flex-direction: column;
