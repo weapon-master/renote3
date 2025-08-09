@@ -3,7 +3,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
 import EPub from 'epub2';
-import * as pdfParse from 'pdf-parse';
+const pdfParse = require('pdf-parse');
 import StreamZip from 'node-stream-zip';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
