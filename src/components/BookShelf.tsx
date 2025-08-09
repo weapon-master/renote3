@@ -12,23 +12,7 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
 
   // Load sample books for demonstration
   useEffect(() => {
-    const sampleBooks: Book[] = [
-      {
-        id: '1',
-        title: '示例书籍 1',
-        filePath: '/path/to/sample1.epub'
-      },
-      {
-        id: '2',
-        title: '示例书籍 2',
-        filePath: '/path/to/sample2.pdf'
-      },
-      {
-        id: '3',
-        title: '示例书籍 3',
-        filePath: '/path/to/sample3.epub'
-      }
-    ];
+    const sampleBooks: Book[] = [];
     setBooks(sampleBooks);
   }, []);
 
