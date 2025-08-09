@@ -2,8 +2,8 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
-import { parse as parseEpub } from 'epub-metadata';
-import pdfParse from 'pdf-parse';
+import EPub from 'epub2';
+import * as pdfParse from 'pdf-parse';
 import StreamZip from 'node-stream-zip';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -76,86 +76,216 @@ async function imageToDataUrl(filePath: string): Promise<string> {
 
 // Extract cover image from EPUB file
 async function extractEpubCover(filePath: string): Promise<string | undefined> {
+  let zip: any = null;
+  
   try {
-    const zip = new StreamZip.async({ file: filePath });
+    console.log(`开始提取 EPUB 封面: ${filePath}`);
+    
+    zip = new StreamZip.async({ file: filePath });
     const entries = await zip.entries();
+    
+    console.log(`EPUB 文件包含 ${Object.keys(entries).length} 个条目`);
     
     // Look for common cover image paths in EPUB
     const coverPaths = [
-      'cover.jpeg', 'cover.jpg', 'cover.png',
-      'images/cover.jpeg', 'images/cover.jpg', 'images/cover.png',
-      'OEBPS/cover.jpeg', 'OEBPS/cover.jpg', 'OEBPS/cover.png',
-      'OEBPS/images/cover.jpeg', 'OEBPS/images/cover.jpg', 'OEBPS/images/cover.png'
+      // 根目录
+      'cover.jpeg', 'cover.jpg', 'cover.png', 'cover.gif', 'cover.webp',
+      // images 目录
+      'images/cover.jpeg', 'images/cover.jpg', 'images/cover.png', 'images/cover.gif', 'images/cover.webp',
+      // OEBPS 目录
+      'OEBPS/cover.jpeg', 'OEBPS/cover.jpg', 'OEBPS/cover.png', 'OEBPS/cover.gif', 'OEBPS/cover.webp',
+      'OEBPS/images/cover.jpeg', 'OEBPS/images/cover.jpg', 'OEBPS/images/cover.png', 'OEBPS/images/cover.gif', 'OEBPS/images/cover.webp',
+      // 其他可能的路径
+      'EPUB/cover.jpeg', 'EPUB/cover.jpg', 'EPUB/cover.png',
+      'EPUB/images/cover.jpeg', 'EPUB/images/cover.jpg', 'EPUB/images/cover.png',
+      // 查找任何包含 "cover" 的图片文件
+      ...Object.keys(entries).filter(entry => 
+        entry.toLowerCase().includes('cover') && 
+        /\.(jpeg|jpg|png|gif|webp)$/i.test(entry)
+      )
     ];
+    
+    console.log('搜索封面路径:', coverPaths);
     
     for (const coverPath of coverPaths) {
       if (entries[coverPath]) {
-        // Extract the cover image to a temporary location
-        const tempDir = app.getPath('temp');
-        const coverFileName = `epub_cover_${Date.now()}_${path.basename(coverPath)}`;
-        const coverFilePath = path.join(tempDir, coverFileName);
+        console.log(`找到封面文件: ${coverPath}`);
         
-        await zip.extract(coverPath, coverFilePath);
-        await zip.close();
-        
-        // Convert to data URL
-        const dataUrl = await imageToDataUrl(coverFilePath);
-        
-        // Clean up temporary file
-        fs.unlinkSync(coverFilePath);
-        
-        return dataUrl;
+        try {
+          // Extract the cover image to a temporary location
+          const tempDir = app.getPath('temp');
+          const coverFileName = `epub_cover_${Date.now()}_${path.basename(coverPath)}`;
+          const coverFilePath = path.join(tempDir, coverFileName);
+          
+          console.log(`提取封面到临时文件: ${coverFilePath}`);
+          
+          await zip.extract(coverPath, coverFilePath);
+          
+          // Convert to data URL
+          const dataUrl = await imageToDataUrl(coverFilePath);
+          
+          console.log(`封面转换成功，大小: ${dataUrl.length} 字符`);
+          
+          // Clean up temporary file
+          fs.unlinkSync(coverFilePath);
+          
+          return dataUrl;
+        } catch (extractError) {
+          console.error(`提取封面文件 ${coverPath} 时出错:`, extractError);
+          continue; // 尝试下一个路径
+        }
       }
     }
     
-    await zip.close();
+    // 如果没有找到明确的封面，尝试查找第一个图片文件
+    console.log('未找到明确的封面文件，尝试查找第一个图片文件...');
+    const imageEntries = Object.keys(entries).filter(entry => 
+      /\.(jpeg|jpg|png|gif|webp)$/i.test(entry) &&
+      !entry.includes('icon') && 
+      !entry.includes('logo')
+    );
+    
+    if (imageEntries.length > 0) {
+      const firstImage = imageEntries[0];
+      console.log(`使用第一个图片作为封面: ${firstImage}`);
+      
+      try {
+        const tempDir = app.getPath('temp');
+        const coverFileName = `epub_cover_${Date.now()}_${path.basename(firstImage)}`;
+        const coverFilePath = path.join(tempDir, coverFileName);
+        
+        await zip.extract(firstImage, coverFilePath);
+        const dataUrl = await imageToDataUrl(coverFilePath);
+        fs.unlinkSync(coverFilePath);
+        
+        console.log(`使用 ${firstImage} 作为封面成功`);
+        return dataUrl;
+      } catch (extractError) {
+        console.error(`提取图片文件 ${firstImage} 时出错:`, extractError);
+      }
+    }
+    
+    console.log('未找到任何可用的封面图片');
     return undefined;
+    
   } catch (error) {
-    console.error('Error extracting EPUB cover:', error);
+    console.error('提取 EPUB 封面时发生错误:', error);
     return undefined;
+  } finally {
+    // 确保 zip 文件被正确关闭
+    if (zip) {
+      try {
+        await zip.close();
+        console.log('EPUB 文件已关闭');
+      } catch (closeError) {
+        console.error('关闭 EPUB 文件时出错:', closeError);
+      }
+    }
   }
 }
 
-// Extract metadata from EPUB file
-async function extractEpubMetadata(filePath: string): Promise<{title: string, cover?: string}> {
+// Extract metadata from EPUB file using epub2
+async function extractEpubMetadata(filePath: string): Promise<{title: string, cover?: string, author?: string, description?: string}> {
   try {
-    const epubData = await parseEpub(filePath);
-    const title = epubData.title || path.basename(filePath, path.extname(filePath));
+    console.log(`开始提取 EPUB 元数据: ${filePath}`);
+    
+    const epub = await EPub.createAsync(filePath);
+    const epubData = epub;
+    
+    console.log('EPUB 元数据:', epubData.metadata);
+    
+    // Extract title from metadata
+    let title = path.basename(filePath, path.extname(filePath));
+    if (epubData.metadata && epubData.metadata.title) {
+      title = epubData.metadata.title;
+      console.log(`提取到标题: ${title}`);
+    } else {
+      console.log(`使用文件名作为标题: ${title}`);
+    }
+    
+    // Extract author if available
+    let author: string | undefined;
+    if (epubData.metadata && epubData.metadata.creator) {
+      author = epubData.metadata.creator;
+      console.log(`提取到作者: ${author}`);
+    } else {
+      console.log('未找到作者信息');
+    }
+    
+    // Extract description if available
+    let description: string | undefined;
+    if (epubData.metadata && epubData.metadata.description) {
+      description = epubData.metadata.description;
+      console.log(`提取到描述: ${description}`);
+    } else {
+      console.log('未找到描述信息');
+    }
     
     // Try to extract cover image
+    console.log('开始提取封面...');
     const cover = await extractEpubCover(filePath);
     
-    return {
+    if (cover) {
+      console.log('封面提取成功');
+    } else {
+      console.log('封面提取失败');
+    }
+    
+    const result = {
       title: title,
-      cover: cover
+      cover: cover,
+      author: author,
+      description: description
     };
+    
+    console.log('EPUB 元数据提取完成:', result);
+    return result;
+    
   } catch (error) {
-    console.error('Error extracting EPUB metadata:', error);
+    console.error('提取 EPUB 元数据时发生错误:', error);
     return {
       title: path.basename(filePath, path.extname(filePath)),
-      cover: undefined
+      cover: undefined,
+      author: undefined,
+      description: undefined
     };
   }
 }
 
 // Extract metadata from PDF file
-async function extractPdfMetadata(filePath: string): Promise<{title: string, cover?: string}> {
+async function extractPdfMetadata(filePath: string): Promise<{title: string, cover?: string, author?: string, description?: string}> {
   try {
     const dataBuffer = fs.readFileSync(filePath);
     const data = await pdfParse(dataBuffer);
     const title = data.info.Title || path.basename(filePath, path.extname(filePath));
     
+    // Extract author if available
+    let author: string | undefined;
+    if (data.info.Author) {
+      author = data.info.Author;
+    }
+    
+    // Extract description if available
+    let description: string | undefined;
+    if (data.info.Subject) {
+      description = data.info.Subject;
+    }
+    
     // PDFs don't typically have embedded covers in the same way as EPUBs
     // We'll use a placeholder cover
     return {
       title: title,
-      cover: undefined
+      cover: undefined,
+      author: author,
+      description: description
     };
   } catch (error) {
     console.error('Error extracting PDF metadata:', error);
     return {
       title: path.basename(filePath, path.extname(filePath)),
-      cover: undefined
+      cover: undefined,
+      author: undefined,
+      description: undefined
     };
   }
 }
@@ -191,7 +321,9 @@ ipcMain.on('import-books', async (event, args) => {
           // Fallback for other files
           metadata = {
             title: path.basename(filePath, path.extname(filePath)),
-            cover: undefined
+            cover: undefined,
+            author: undefined,
+            description: undefined
           };
         }
         
@@ -200,6 +332,8 @@ ipcMain.on('import-books', async (event, args) => {
           title: metadata.title,
           coverPath: metadata.cover,
           filePath: filePath,
+          author: metadata.author,
+          description: metadata.description,
         });
       } catch (error) {
         console.error(`Error processing file ${filePath}:`, error);

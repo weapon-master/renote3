@@ -7,6 +7,9 @@ export default defineConfig({
       '@': '/src'
     }
   },
+  build: {
+    sourcemap: 'inline',
+  },
   esbuild: {
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',

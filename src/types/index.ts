@@ -3,4 +3,6 @@ export interface Book {
   title: string;
   coverPath?: string;
   filePath: string;
+  author?: string;
+  description?: string;
 }
