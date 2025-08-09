@@ -39,6 +39,7 @@ declare global {
           }>;
           error?: string;
         }>;
+        getLocalFileUrl: (filePath: string) => string;
       };
     };
   }

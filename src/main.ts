@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
@@ -76,6 +76,29 @@ const createWindow = () => {
 app.on('ready', () => {
   // 注册EPUB相关的IPC处理器
   registerEpubHandlers();
+  // 注册自定义协议以安全地从本地文件系统提供 EPUB 资源
+  try {
+    protocol.registerFileProtocol('epub-local', (request, callback) => {
+      try {
+        // request.url 类似于 epub-local:///C%3A%5Cpath%5Cto%5Cfile.epub
+        const encodedPath = request.url.replace('epub-local:///', '');
+        const decodedPath = decodeURIComponent(encodedPath);
+        const normalizedPath = path.normalize(decodedPath);
+        // 允许访问的根目录：用户数据、临时目录、下载目录和任意绝对路径（受后续 fs 权限控制）
+        // 这里主要防止协议滥用，确保是绝对路径
+        if (path.isAbsolute(normalizedPath)) {
+          callback({ path: normalizedPath });
+        } else {
+          callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+        }
+      } catch (e) {
+        console.error('epub-local protocol error:', e);
+        callback({ error: -2 }); // net::FAILED
+      }
+    });
+  } catch (e) {
+    console.error('Failed to register epub-local protocol:', e);
+  }
   
   // 创建主窗口
   createWindow();

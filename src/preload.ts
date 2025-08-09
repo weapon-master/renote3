@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld('electron', {
     readContent: (filePath: string) => {
       console.log('Preload: 调用EPUB readContent:', filePath);
       return ipcRenderer.invoke('read-epub-content', filePath);
+    },
+    getLocalFileUrl: (filePath: string) => {
+      // 对路径进行编码，避免 Windows 路径中的特殊字符导致解析错误
+      const encoded = encodeURIComponent(filePath);
+      return `epub-local:///${encoded}`;
     }
   }
 });
