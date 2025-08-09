@@ -12,12 +12,16 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
   const [location, setLocation] = useState<string | number>(0);
   const [annotations, setAnnotations] = useState<Annotation[]>(book.annotations || []);
   const renditionRef = useRef<any>(null);
-  const [pendingSelection, setPendingSelection] = useState<{cfiRange: string; text: string} | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<{ id?: string; cfiRange: string; text: string } | null>(null);
   const [noteDraft, setNoteDraft] = useState<string>('');
   const [showNoteModal, setShowNoteModal] = useState<boolean>(false);
   const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const [notePopup, setNotePopup] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
+  const [hoverToolbar, setHoverToolbar] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
+  const hoverToolbarRef = useRef<HTMLDivElement | null>(null);
+  const [clickToolbar, setClickToolbar] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
+  const clickToolbarRef = useRef<HTMLDivElement | null>(null);
 
   const epubUrl = useMemo(() => {
     if (window.electron?.epub?.getLocalFileUrl) {
@@ -38,6 +42,9 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       rendition.themes.default({
         '::selection': { background: 'rgba(0, 123, 255, 0.35)' },
         '::-moz-selection': { background: 'rgba(0, 123, 255, 0.35)' },
+        // ensure highlights can receive hover events
+        '.epubjs-hl': { 'pointer-events': 'auto' },
+        '.epub-highlight': { 'pointer-events': 'auto' },
       });
     } catch {}
     // Render existing highlights
@@ -78,19 +85,22 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       }
     });
 
-    // Hide toolbar when relocating (page change)
+    // Hide toolbars/popups when relocating (page change)
     rendition.on('relocated', () => {
       setToolbarPosition(null);
       setNotePopup(null);
+      setHoverToolbar(null);
+      setClickToolbar(null);
     });
 
-    // Dismiss toolbar on any click inside the iframe contents
+    // Dismiss toolbars on any click inside the iframe contents and attach hover handlers
     try {
       rendition.on('rendered', (_section: any, contents: any) => {
         const doc: Document | undefined = contents?.document;
         if (!doc) return;
-        const handler = () => { setToolbarPosition(null); setNotePopup(null); };
+        const handler = () => { setToolbarPosition(null); setNotePopup(null); setHoverToolbar(null); setClickToolbar(null); };
         doc.addEventListener('mousedown', handler);
+        // No hover toolbar; toolbar is shown on click now
         // Best-effort removal when content is destroyed
         try { contents.on && contents.on('destroy', () => doc.removeEventListener('mousedown', handler)); } catch {}
       });
@@ -132,19 +142,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       if (rect && iframeEl) {
         const iframeRect = iframeEl.getBoundingClientRect();
         const padding = 6;
-        const popupWidth = 280;
-        const popupHeight = 140;
-        let left = iframeRect.left + rect.left + rect.width / 2 - popupWidth / 2;
-        let topCandidate = iframeRect.top + rect.top - popupHeight - padding;
+        const toolbarWidth = 280;
+        const toolbarHeight = 40;
+        let left = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
+        let topCandidate = iframeRect.top + rect.top - toolbarHeight - padding;
         let top = topCandidate < 8 ? iframeRect.top + rect.bottom + padding : topCandidate;
-        left = Math.max(8, Math.min(window.innerWidth - popupWidth - 8, left));
+        left = Math.max(8, Math.min(window.innerWidth - toolbarWidth - 8, left));
         top = Math.max(8, top);
-        setNotePopup({ top, left, annotation });
+        setClickToolbar({ top, left, annotation });
       } else {
-        setNotePopup({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
+        setClickToolbar({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
       }
     } catch {
-      setNotePopup({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
+      setClickToolbar({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
     }
   };
 
@@ -153,18 +163,24 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       setShowNoteModal(false);
       return;
     }
-    const newAnn: Annotation = {
-      id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      cfiRange: pendingSelection.cfiRange,
-      text: pendingSelection.text,
-      note: noteDraft.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    const next = [...annotations, newAnn];
+    let next: Annotation[];
+    if (pendingSelection.id) {
+      next = annotations.map(a => a.id === pendingSelection.id ? { ...a, note: noteDraft.trim(), updatedAt: new Date().toISOString() } : a);
+    } else {
+      const newAnn: Annotation = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        cfiRange: pendingSelection.cfiRange,
+        text: pendingSelection.text,
+        note: noteDraft.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      next = [...annotations, newAnn];
+    }
     setAnnotations(next);
     setShowNoteModal(false);
     setPendingSelection(null);
     setToolbarPosition(null);
+    setHoverToolbar(null);
     // Persist to storage via Electron API
     try {
       await window.electron?.books?.update?.(book.id, { annotations: next });
@@ -204,6 +220,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     return () => document.removeEventListener('mousedown', onDocMouseDown, true);
   }, [notePopup]);
 
+  // Dismiss click toolbar on outside click
+  useEffect(() => {
+    if (!clickToolbar) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const el = clickToolbarRef.current;
+      if (el && e.target instanceof Node && !el.contains(e.target)) {
+        setClickToolbar(null);
+      }
+    };
+    document.addEventListener('mousedown', onDocMouseDown, true);
+    return () => document.removeEventListener('mousedown', onDocMouseDown, true);
+  }, [clickToolbar]);
+
   if (!epubUrl) {
     return (
       <div className="epub-error">
@@ -229,14 +258,46 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
           ref={toolbarRef}
           style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, width: 220 }}
         >
-          <button
+          <button 
             className="toolbar-btn"
             onClick={() => { setShowNoteModal(true); }}
           >添加批注</button>
-          <button
+          <button 
             className="toolbar-btn secondary"
             onClick={() => { /* explain no-op for now */ }}
           >解释</button>
+        </div>,
+        document.body
+      )}
+      {clickToolbar && createPortal(
+        <div
+          className="selection-toolbar"
+          ref={clickToolbarRef}
+          style={{ position: 'fixed', top: clickToolbar.top, left: clickToolbar.left, width: 280 }}
+        >
+          <button
+            className="toolbar-btn"
+            onClick={() => {
+              setPendingSelection({ id: clickToolbar.annotation.id, cfiRange: clickToolbar.annotation.cfiRange, text: clickToolbar.annotation.text });
+              setNoteDraft(clickToolbar.annotation.note);
+              setShowNoteModal(true);
+              setClickToolbar(null);
+            }}
+          >编辑</button>
+          <button
+            className="toolbar-btn"
+            onClick={() => {
+              setNotePopup({ top: clickToolbar.top, left: clickToolbar.left, annotation: clickToolbar.annotation });
+              setClickToolbar(null);
+            }}
+          >查看</button>
+          <button
+            className="toolbar-btn secondary"
+            onClick={() => {
+              removeAnnotation(clickToolbar.annotation.id);
+              setClickToolbar(null);
+            }}
+          >删除</button>
         </div>,
         document.body
       )}
@@ -258,7 +319,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       {showNoteModal && (
         <div className="note-modal-backdrop">
           <div className="note-modal">
-            <h4>添加批注</h4>
+            <h4>{pendingSelection?.id ? '编辑批注' : '添加批注'}</h4>
             <div className="note-selected-text">{pendingSelection?.text}</div>
             <textarea
               placeholder="输入你的笔记..."
@@ -272,20 +333,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
           </div>
         </div>
       )}
-      {/* Annotation list (quick access) */}
-      {annotations.length > 0 && (
-        <div className="epub-sidebar">
-          <h4>批注</h4>
-          <div className="chapter-list">
-            {annotations.map(a => (
-              <button key={a.id} className="chapter-item" onClick={() => setLocation(a.cfiRange)}>
-                {a.note}
-                <span style={{ float: 'right' }} onClick={(e) => { e.stopPropagation(); removeAnnotation(a.id); }}>✕</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Sidebar notes list removed per request */}
     </div>
   );
 };

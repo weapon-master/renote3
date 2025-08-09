@@ -233,9 +233,7 @@
   font-size: 13px;
 }
 
-.toolbar-btn.secondary {
-  background: #495057;
-}
+.toolbar-btn.secondary { background: #c92a2a; }
 
 .toolbar-btn:hover {
   background: #495057;
