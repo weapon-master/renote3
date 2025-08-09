@@ -40,11 +40,13 @@
   "dependencies": {
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
+    "@types/react-router-dom": "^5.3.3",
     "electron-squirrel-startup": "^1.0.1",
     "epub2": "^3.0.2",
     "node-stream-zip": "^1.15.0",
     "pdf-parse": "^1.1.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.8.0"
   }
 }

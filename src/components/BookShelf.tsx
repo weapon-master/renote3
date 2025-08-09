@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BookItem from './BookItem';
 import { Book } from '../types';
 import '../components/BookShelf.css';
 
-interface BookShelfProps {
-  onBookSelect: (book: Book) => void;
-}
-
-const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
+const BookShelf: React.FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   // 从本地存储加载书籍数据
   const loadBooksFromStorage = async () => {
@@ -182,6 +180,10 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
     }
   }, []);
 
+  const handleBookSelect = (book: Book) => {
+    navigate(`/reader/${book.id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="page" id="book-shelf">
@@ -198,7 +200,10 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
     <div className="page" id="book-shelf">
       <header>
         <h1>书架</h1>
-        <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
+        <div className="header-buttons">
+          <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
+          <button id="settings-btn" onClick={() => navigate('/settings')}>设置</button>
+        </div>
       </header>
       
       <div id="books-container">
@@ -212,7 +217,7 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
               key={book.id}
               book={book}
               index={index}
-              onBookSelect={onBookSelect}
+              onBookSelect={handleBookSelect}
               onDelete={handleDeleteBook}
               onEditTitle={handleEditBookTitle}
               onReorder={handleReorderBooks}
