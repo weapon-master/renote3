@@ -14,6 +14,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
   const [pendingSelection, setPendingSelection] = useState<{cfiRange: string; text: string} | null>(null);
   const [noteDraft, setNoteDraft] = useState<string>('');
   const [showNoteModal, setShowNoteModal] = useState<boolean>(false);
+  const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);
 
   const epubUrl = useMemo(() => {
     if (window.electron?.epub?.getLocalFileUrl) {
@@ -40,11 +41,38 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     applyHighlights(rendition, annotations);
     // Selection handler
     rendition.on('selected', (cfiRange: string, contents: any) => {
-      const selectedText = contents.window.getSelection().toString();
+      const sel = contents.window.getSelection();
+      const selectedText = sel ? sel.toString() : '';
       setPendingSelection({ cfiRange, text: selectedText });
       setNoteDraft('');
-      setShowNoteModal(true);
-      // Keep the selection visible; user can still see what was selected
+      // Position toolbar above selection
+      try {
+        const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+        const rect = range ? range.getBoundingClientRect() : null;
+        const iframeEl: HTMLIFrameElement | null = contents.iframe || null;
+        if (rect && iframeEl) {
+          const iframeRect = iframeEl.getBoundingClientRect();
+          const padding = 8;
+          const toolbarWidth = 220;
+          const toolbarHeight = 40;
+          let left = iframeRect.left + rect.left + (rect.width / 2) - (toolbarWidth / 2);
+          let top = iframeRect.top + rect.top - toolbarHeight - padding;
+          // Clamp to viewport
+          left = Math.max(8, Math.min(window.innerWidth - toolbarWidth - 8, left));
+          top = Math.max(8, top);
+          setToolbarPosition({ top, left });
+        } else {
+          // Fallback: center top of viewport
+          setToolbarPosition({ top: 20, left: (window.innerWidth - 220) / 2 });
+        }
+      } catch {
+        setToolbarPosition({ top: 20, left: (window.innerWidth - 220) / 2 });
+      }
+    });
+
+    // Hide toolbar when relocating (page change)
+    rendition.on('relocated', () => {
+      setToolbarPosition(null);
     });
   };
 
@@ -85,6 +113,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     setAnnotations(next);
     setShowNoteModal(false);
     setPendingSelection(null);
+    setToolbarPosition(null);
     // Persist to storage via Electron API
     try {
       await window.electron?.books?.update?.(book.id, { annotations: next });
@@ -122,6 +151,21 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
         showToc
         getRendition={handleRendition}
       />
+      {toolbarPosition && pendingSelection && (
+        <div
+          className="selection-toolbar"
+          style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, width: 220 }}
+        >
+          <button
+            className="toolbar-btn"
+            onClick={() => { setShowNoteModal(true); }}
+          >添加批注</button>
+          <button
+            className="toolbar-btn secondary"
+            onClick={() => { /* explain no-op for now */ }}
+          >解释</button>
+        </div>
+      )}
       {/* Simple note modal */}
       {showNoteModal && (
         <div className="note-modal-backdrop">
@@ -135,7 +179,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
             />
             <div className="note-actions">
               <button className="nav-btn" onClick={saveAnnotation}>保存</button>
-              <button className="nav-btn" onClick={() => { setShowNoteModal(false); setPendingSelection(null); }}>取消</button>
+              <button className="nav-btn" onClick={() => { setShowNoteModal(false); setPendingSelection(null); setToolbarPosition(null); }}>取消</button>
             </div>
           </div>
         </div>
