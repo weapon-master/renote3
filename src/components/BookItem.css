@@ -1,0 +1,106 @@
+.book {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+  position: relative;
+  user-select: none;
+}
+
+.book:hover {
+  transform: translateY(-5px);
+}
+
+.book.dragging {
+  opacity: 0.5;
+  transform: scale(1.05);
+}
+
+.book.drag-over {
+  border: 2px dashed #4CAF50;
+}
+
+.book-cover {
+  width: 100px;
+  height: 150px;
+  background-color: #ddd;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.book-cover img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+}
+
+.book-cover-placeholder {
+  font-size: 48px;
+  font-weight: bold;
+  color: #777;
+}
+
+.book-title {
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+  padding: 0 5px;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-title-edit {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+}
+
+.book-title-edit input {
+  width: 90%;
+  padding: 5px;
+  margin-bottom: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.edit-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.book-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: none;
+}
+
+.book:hover .book-actions {
+  display: flex;
+}
+
+.book-actions button {
+  padding: 5px;
+  font-size: 12px;
+  margin: 0 2px;
+  background-color: rgba(0,0,0,0.5);
+}

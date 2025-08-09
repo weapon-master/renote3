@@ -22,8 +22,8 @@ const createWindow = () => {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
@@ -169,7 +169,7 @@ ipcMain.on('import-books', async (event, args) => {
       { name: 'All Files', extensions: ['*'] }
     ]
   });
-
+  console.log('result', result)
   if (!result.canceled && result.filePaths.length > 0) {
     const books = [];
     
