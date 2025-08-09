@@ -15,6 +15,38 @@ if (started) {
 app.commandLine.appendSwitch('disable-features', 'Autofill,TranslateUI');
 app.commandLine.appendSwitch('disable-web-security');
 
+// 书籍数据文件路径
+const BOOKS_DATA_FILE = path.join(app.getPath('userData'), 'books.json');
+
+// 加载保存的书籍数据
+function loadBooksData(): any[] {
+  try {
+    if (fs.existsSync(BOOKS_DATA_FILE)) {
+      const data = fs.readFileSync(BOOKS_DATA_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('加载书籍数据时出错:', error);
+  }
+  return [];
+}
+
+// 保存书籍数据到本地文件
+function saveBooksData(books: any[]): void {
+  try {
+    // 确保用户数据目录存在
+    const userDataDir = path.dirname(BOOKS_DATA_FILE);
+    if (!fs.existsSync(userDataDir)) {
+      fs.mkdirSync(userDataDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(BOOKS_DATA_FILE, JSON.stringify(books, null, 2), 'utf8');
+    console.log(`书籍数据已保存到: ${BOOKS_DATA_FILE}`);
+  } catch (error) {
+    console.error('保存书籍数据时出错:', error);
+  }
+}
+
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -340,7 +372,57 @@ ipcMain.on('import-books', async (event, args) => {
       }
     }
     
+    // 保存新导入的书籍到本地存储
+    if (books.length > 0) {
+      const existingBooks = loadBooksData();
+      const updatedBooks = [...existingBooks, ...books];
+      saveBooksData(updatedBooks);
+    }
+    
     event.reply('import-books-result', books);
+  }
+});
+
+// 加载保存的书籍数据
+ipcMain.handle('load-books', async () => {
+  const books = loadBooksData();
+  console.log(`加载了 ${books.length} 本书籍`);
+  return books;
+});
+
+// 保存书籍数据
+ipcMain.handle('save-books', async (event, books: any[]) => {
+  saveBooksData(books);
+  return { success: true };
+});
+
+// 删除书籍
+ipcMain.handle('delete-book', async (event, bookId: string) => {
+  try {
+    const existingBooks = loadBooksData();
+    const updatedBooks = existingBooks.filter(book => book.id !== bookId);
+    saveBooksData(updatedBooks);
+    console.log(`书籍 ${bookId} 已删除`);
+    return { success: true };
+  } catch (error) {
+    console.error('删除书籍时出错:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 更新书籍信息
+ipcMain.handle('update-book', async (event, bookId: string, updates: any) => {
+  try {
+    const existingBooks = loadBooksData();
+    const updatedBooks = existingBooks.map(book => 
+      book.id === bookId ? { ...book, ...updates } : book
+    );
+    saveBooksData(updatedBooks);
+    console.log(`书籍 ${bookId} 已更新`);
+    return { success: true };
+  } catch (error) {
+    console.error('更新书籍时出错:', error);
+    return { success: false, error: error.message };
   }
 });
 

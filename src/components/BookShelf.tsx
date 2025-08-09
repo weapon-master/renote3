@@ -9,12 +9,51 @@ interface BookShelfProps {
 
 const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
   const [books, setBooks] = useState<Book[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load sample books for demonstration
+  // 从本地存储加载书籍数据
+  const loadBooksFromStorage = async () => {
+    try {
+      setIsLoading(true);
+      const electron = (window as any).electron;
+      if (electron && electron.books) {
+        const savedBooks = await electron.books.load();
+        console.log('从本地存储加载的书籍:', savedBooks);
+        setBooks(savedBooks || []);
+      }
+    } catch (error) {
+      console.error('加载书籍数据时出错:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 保存书籍数据到本地存储
+  const saveBooksToStorage = async (booksToSave: Book[]) => {
+    try {
+      const electron = (window as any).electron;
+      if (electron && electron.books) {
+        await electron.books.save(booksToSave);
+        console.log('书籍数据已保存到本地存储');
+      }
+    } catch (error) {
+      console.error('保存书籍数据时出错:', error);
+    }
+  };
+
+  // 组件挂载时加载书籍数据
   useEffect(() => {
-    const sampleBooks: Book[] = [];
-    setBooks(sampleBooks);
+    loadBooksFromStorage();
   }, []);
+
+  // 当书籍数据变化时自动保存
+  useEffect(() => {
+    if (!isLoading && books.length > 0) {
+      saveBooksToStorage(books);
+    }
+  }, [books, isLoading]);
+
+  // 移除示例书籍的useEffect，因为我们现在从本地存储加载
 
   const handleImportBooks = () => {
     console.log('Window object:', window);
@@ -36,21 +75,60 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
       // 检查是否已经存在相同的书籍
       const existingBook = books.find(book => book.title === newBook.title);
       if (!existingBook) {
-        setBooks([...books, newBook]);
+        const updatedBooks = [...books, newBook];
+        setBooks(updatedBooks);
+        // 尝试保存到本地存储（如果有API的话）
+        if (electron && electron.books) {
+          electron.books.save(updatedBooks).catch((error: unknown) => {
+            console.error('保存书籍数据时出错:', error);
+          });
+        }
       } else {
         console.log('Book already exists, not adding duplicate');
       }
     }
   };
 
-  const handleDeleteBook = (bookId: string) => {
-    setBooks(books.filter(book => book.id !== bookId));
+  const handleDeleteBook = async (bookId: string) => {
+    try {
+      const electron = (window as any).electron;
+      if (electron && electron.books) {
+        const result = await electron.books.delete(bookId);
+        if (result.success) {
+          setBooks(books.filter(book => book.id !== bookId));
+        } else {
+          console.error('删除书籍失败:', result.error);
+        }
+      } else {
+        // 如果没有Electron API，直接更新本地状态
+        setBooks(books.filter(book => book.id !== bookId));
+      }
+    } catch (error) {
+      console.error('删除书籍时出错:', error);
+    }
   };
 
-  const handleEditBookTitle = (bookId: string, newTitle: string) => {
-    setBooks(books.map(book => 
-      book.id === bookId ? { ...book, title: newTitle } : book
-    ));
+  const handleEditBookTitle = async (bookId: string, newTitle: string) => {
+    try {
+      const electron = (window as any).electron;
+      if (electron && electron.books) {
+        const result = await electron.books.update(bookId, { title: newTitle });
+        if (result.success) {
+          setBooks(books.map(book => 
+            book.id === bookId ? { ...book, title: newTitle } : book
+          ));
+        } else {
+          console.error('更新书籍失败:', result.error);
+        }
+      } else {
+        // 如果没有Electron API，直接更新本地状态
+        setBooks(books.map(book => 
+          book.id === bookId ? { ...book, title: newTitle } : book
+        ));
+      }
+    } catch (error) {
+      console.error('更新书籍时出错:', error);
+    }
   };
 
   const handleReorderBooks = (draggedId: string, targetId: string) => {
@@ -104,6 +182,18 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
     }
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="page" id="book-shelf">
+        <header>
+          <h1>书架</h1>
+          <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
+        </header>
+        <div className="loading">正在加载书籍...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="page" id="book-shelf">
       <header>
@@ -112,17 +202,23 @@ const BookShelf: React.FC<BookShelfProps> = ({ onBookSelect }) => {
       </header>
       
       <div id="books-container">
-        {books.map((book, index) => (
-          <BookItem
-            key={book.id}
-            book={book}
-            index={index}
-            onBookSelect={onBookSelect}
-            onDelete={handleDeleteBook}
-            onEditTitle={handleEditBookTitle}
-            onReorder={handleReorderBooks}
-          />
-        ))}
+        {books.length === 0 ? (
+          <div className="empty-state">
+            <p>书架还是空的，点击"导入书籍"开始添加你的第一本书吧！</p>
+          </div>
+        ) : (
+          books.map((book, index) => (
+            <BookItem
+              key={book.id}
+              book={book}
+              index={index}
+              onBookSelect={onBookSelect}
+              onDelete={handleDeleteBook}
+              onEditTitle={handleEditBookTitle}
+              onReorder={handleReorderBooks}
+            />
+          ))
+        )}
       </div>
     </div>
   );

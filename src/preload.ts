@@ -24,6 +24,13 @@ contextBridge.exposeInMainWorld('electron', {
       console.log('IPC removeListener:', channel);
       ipcRenderer.removeListener(channel, func);
     }
+  },
+  // 新增的持久化API
+  books: {
+    load: () => ipcRenderer.invoke('load-books'),
+    save: (books: any[]) => ipcRenderer.invoke('save-books', books),
+    delete: (bookId: string) => ipcRenderer.invoke('delete-book', bookId),
+    update: (bookId: string, updates: any) => ipcRenderer.invoke('update-book', bookId, updates)
   }
 });
 
