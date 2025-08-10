@@ -17,6 +17,7 @@ const Reader: React.FC = () => {
     return saved ? parseInt(saved, 10) : 400;
   });
   const [isResizing, setIsResizing] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
 
   useEffect(() => {
     const loadBook = async () => {
@@ -106,6 +107,14 @@ const Reader: React.FC = () => {
     document.body.style.userSelect = '';
   };
 
+  const handleMouseEnter = () => {
+    setShowHeader(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowHeader(false);
+  };
+
   useEffect(() => {
     if (isResizing) {
       document.addEventListener('mousemove', handleResizeMove);
@@ -119,8 +128,13 @@ const Reader: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page" id="reader">
-        <header>
+      <div 
+        className="page" 
+        id="reader"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
           <button id="back-btn" onClick={handleBack}>返回书架</button>
           <h1>加载中...</h1>
         </header>
@@ -133,8 +147,13 @@ const Reader: React.FC = () => {
 
   if (!book) {
     return (
-      <div className="page" id="reader">
-        <header>
+      <div 
+        className="page" 
+        id="reader"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
           <button id="back-btn" onClick={handleBack}>返回书架</button>
           <h1>书籍阅读器</h1>
         </header>
@@ -146,8 +165,14 @@ const Reader: React.FC = () => {
   }
 
   return (
-    <div className="page" id="reader">
-      <header>
+    <div 
+      className="page" 
+      id="reader"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleMouseLeave}
+    >
+      <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
         <button id="back-btn" onClick={handleBack}>返回书架</button>
         <h1 id="reader-title">{book.title}</h1>
         <button 
