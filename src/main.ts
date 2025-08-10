@@ -13,7 +13,12 @@ import {
   updateBook, 
   deleteBook, 
   updateBookAnnotations,
-  migrateFromJson 
+  migrateFromJson,
+  getNoteConnectionsByBookId,
+  createNoteConnection,
+  updateNoteConnection,
+  deleteNoteConnection,
+  batchUpdateNoteConnections
 } from './main/db';
 import { migrateFromJsonFile, needsMigration, getMigrationInfo } from './main/migration';
 
@@ -65,6 +70,8 @@ app.on('ready', () => {
   
   // 注册EPUB相关的IPC处理器
   registerEpubHandlers();
+  // 注册数据库相关的IPC处理器
+  registerDatabaseHandlers();
   // 注册自定义协议以安全地从本地文件系统提供 EPUB 资源
   try {
     protocol.registerFileProtocol('epub-local', (request, callback) => {
@@ -503,6 +510,77 @@ ipcMain.handle('perform-migration', async () => {
     return { success: false, message: `迁移失败: ${error.message}` };
   }
 });
+
+// 注册数据库相关的IPC处理器
+function registerDatabaseHandlers() {
+  // 获取书籍的笔记连接
+  ipcMain.handle('get-note-connections-by-book-id', async (event, bookId: string) => {
+    try {
+      const connections = getNoteConnectionsByBookId(bookId);
+      console.log(`从数据库加载了 ${connections.length} 个笔记连接`);
+      return connections;
+    } catch (error) {
+      console.error('从数据库加载笔记连接时出错:', error);
+      return [];
+    }
+  });
+
+  // 创建笔记连接
+  ipcMain.handle('create-note-connection', async (event, connection: any) => {
+    try {
+      const newConnection = createNoteConnection(connection);
+      console.log(`创建了新的笔记连接: ${newConnection.id}`);
+      return newConnection;
+    } catch (error) {
+      console.error('创建笔记连接时出错:', error);
+      throw error;
+    }
+  });
+
+  // 更新笔记连接
+  ipcMain.handle('update-note-connection', async (event, id: string, updates: any) => {
+    try {
+      const success = updateNoteConnection(id, updates);
+      if (success) {
+        console.log(`笔记连接 ${id} 已更新`);
+        return { success: true };
+      } else {
+        return { success: false, error: '笔记连接不存在' };
+      }
+    } catch (error) {
+      console.error('更新笔记连接时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 删除笔记连接
+  ipcMain.handle('delete-note-connection', async (event, id: string) => {
+    try {
+      const success = deleteNoteConnection(id);
+      if (success) {
+        console.log(`笔记连接 ${id} 已删除`);
+        return { success: true };
+      } else {
+        return { success: false, error: '笔记连接不存在' };
+      }
+    } catch (error) {
+      console.error('删除笔记连接时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 批量更新笔记连接
+  ipcMain.handle('batch-update-note-connections', async (event, bookId: string, connections: any[]) => {
+    try {
+      batchUpdateNoteConnections(bookId, connections);
+      console.log(`批量更新了 ${connections.length} 个笔记连接`);
+      return { success: true };
+    } catch (error) {
+      console.error('批量更新笔记连接时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+}
 
 // 注册EPUB相关的IPC处理器
 function registerEpubHandlers() {

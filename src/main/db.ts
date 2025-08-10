@@ -5,6 +5,8 @@ import { Book, Annotation } from '../types';
 
 // Database file path
 const DB_PATH = path.join(app.getPath('userData'), 'books.db');
+console.log('Database will be created at:', DB_PATH);
+console.log('User data path:', app.getPath('userData'));
 
 // Database instance
 let db: Database.Database | null = null;
@@ -12,6 +14,7 @@ let db: Database.Database | null = null;
 // Initialize database
 export function initDatabase(): void {
   try {
+    console.log('Initializing database at:', DB_PATH);
     db = new Database(DB_PATH);
     
     // Enable foreign keys
@@ -44,12 +47,43 @@ export function initDatabase(): void {
         FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
       )
     `);
+
+    // Create note connections table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS note_connections (
+        id TEXT PRIMARY KEY,
+        book_id TEXT NOT NULL,
+        from_annotation_id TEXT NOT NULL,
+        to_annotation_id TEXT NOT NULL,
+        direction TEXT DEFAULT 'none',
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+        FOREIGN KEY (from_annotation_id) REFERENCES annotations(id) ON DELETE CASCADE,
+        FOREIGN KEY (to_annotation_id) REFERENCES annotations(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('note_connections table created/verified');
     
     // Create indexes for better performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_annotations_book_id ON annotations(book_id);
       CREATE INDEX IF NOT EXISTS idx_books_file_path ON books(file_path);
+      CREATE INDEX IF NOT EXISTS idx_note_connections_book_id ON note_connections(book_id);
+      CREATE INDEX IF NOT EXISTS idx_note_connections_annotations ON note_connections(from_annotation_id, to_annotation_id);
     `);
+    console.log('Database indexes created/verified');
+    
+    // Check if database file exists
+    const fs = require('fs');
+    if (fs.existsSync(DB_PATH)) {
+      console.log('Database file exists at:', DB_PATH);
+      const stats = fs.statSync(DB_PATH);
+      console.log('Database file size:', stats.size, 'bytes');
+    } else {
+      console.error('Database file does not exist at:', DB_PATH);
+    }
     
     console.log('Database initialized successfully');
   } catch (error) {
@@ -432,4 +466,198 @@ export function backupDatabase(backupPath: string): void {
 export function vacuumDatabase(): void {
   const database = getDatabase();
   database.exec('VACUUM');
+}
+
+// Note Connection operations
+export interface NoteConnection {
+  id: string;
+  bookId: string;
+  fromAnnotationId: string;
+  toAnnotationId: string;
+  direction: 'none' | 'bidirectional' | 'unidirectional-forward' | 'unidirectional-backward';
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getNoteConnectionsByBookId(bookId: string): NoteConnection[] {
+  const database = getDatabase();
+  
+  console.log('Getting note connections for bookId:', bookId);
+  
+  // First, check if the table exists
+  const tableCheck = database.prepare(`
+    SELECT name FROM sqlite_master 
+    WHERE type='table' AND name='note_connections'
+  `);
+  const tableExists = tableCheck.get();
+  console.log('note_connections table exists:', !!tableExists);
+  
+  if (!tableExists) {
+    console.error('note_connections table does not exist!');
+    return [];
+  }
+  
+  const stmt = database.prepare(`
+    SELECT id, book_id, from_annotation_id, to_annotation_id, direction, description, created_at, updated_at
+    FROM note_connections
+    WHERE book_id = ?
+    ORDER BY created_at ASC
+  `);
+  
+  const results = stmt.all(bookId);
+  console.log('Raw database results:', results);
+  
+  const connections = results.map((conn: any) => ({
+    id: conn.id,
+    bookId: conn.book_id,
+    fromAnnotationId: conn.from_annotation_id,
+    toAnnotationId: conn.to_annotation_id,
+    direction: conn.direction,
+    description: conn.description,
+    createdAt: conn.created_at,
+    updatedAt: conn.updated_at
+  }));
+  
+  console.log('Mapped connections:', connections);
+  return connections;
+}
+
+export function createNoteConnection(connection: Omit<NoteConnection, 'id' | 'createdAt' | 'updatedAt'>): NoteConnection {
+  const database = getDatabase();
+  // check whether the note connection already exists by checking bookId, fromAnnotationId, toAnnotationId
+  const existingConnection = database.prepare(`
+    SELECT id FROM note_connections WHERE book_id = ? AND from_annotation_id = ? AND to_annotation_id = ?
+  `).get(connection.bookId, connection.fromAnnotationId, connection.toAnnotationId) as NoteConnection | undefined;
+
+  if (existingConnection) {
+    return existingConnection;
+  }
+  const insertStmt = database.prepare(`
+    INSERT INTO note_connections (id, book_id, from_annotation_id, to_annotation_id, direction, description)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  
+  const connectionId = `conn-${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  
+  insertStmt.run(
+    connectionId,
+    connection.bookId,
+    connection.fromAnnotationId,
+    connection.toAnnotationId,
+    connection.direction,
+    connection.description
+  );
+  
+  return {
+    id: connectionId,
+    bookId: connection.bookId,
+    fromAnnotationId: connection.fromAnnotationId,
+    toAnnotationId: connection.toAnnotationId,
+    direction: connection.direction,
+    description: connection.description,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+export function updateNoteConnection(id: string, updates: Partial<Omit<NoteConnection, 'id' | 'bookId' | 'fromAnnotationId' | 'toAnnotationId' | 'createdAt'>>): boolean {
+  const database = getDatabase();
+  
+  const fields = [];
+  const values = [];
+  
+  if (updates.direction !== undefined) {
+    fields.push('direction = ?');
+    values.push(updates.direction);
+  }
+  if (updates.description !== undefined) {
+    fields.push('description = ?');
+    values.push(updates.description);
+  }
+  
+  if (fields.length === 0) {
+    return false;
+  }
+  
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(id);
+  
+  const updateStmt = database.prepare(`
+    UPDATE note_connections
+    SET ${fields.join(', ')}
+    WHERE id = ?
+  `);
+  
+  const result = updateStmt.run(...values);
+  return result.changes > 0;
+}
+
+export function deleteNoteConnection(id: string): boolean {
+  const database = getDatabase();
+  
+  const deleteStmt = database.prepare('DELETE FROM note_connections WHERE id = ?');
+  const result = deleteStmt.run(id);
+  
+  return result.changes > 0;
+}
+
+export function deleteNoteConnectionsByBookId(bookId: string): boolean {
+  const database = getDatabase();
+  
+  const deleteStmt = database.prepare('DELETE FROM note_connections WHERE book_id = ?');
+  const result = deleteStmt.run(bookId);
+  
+  return result.changes > 0;
+}
+
+export function batchUpdateNoteConnections(bookId: string, connections: NoteConnection[]): void {
+  const database = getDatabase();
+  
+  console.log('batchUpdateNoteConnections called with bookId:', bookId, 'connections:', connections);
+  
+  // First, check if the table exists
+  const tableCheck = database.prepare(`
+    SELECT name FROM sqlite_master 
+    WHERE type='table' AND name='note_connections'
+  `);
+  const tableExists = tableCheck.get();
+  console.log('note_connections table exists for saving:', !!tableExists);
+  
+  if (!tableExists) {
+    console.error('note_connections table does not exist for saving!');
+    return;
+  }
+  
+  // Use transaction for atomicity
+  const transaction = database.transaction(() => {
+    // Delete existing connections for this book
+    const deleteStmt = database.prepare('DELETE FROM note_connections WHERE book_id = ?');
+    const deleteResult = deleteStmt.run(bookId);
+    console.log('Deleted existing connections:', deleteResult.changes);
+    
+    // Insert new connections
+    const insertStmt = database.prepare(`
+      INSERT INTO note_connections (id, book_id, from_annotation_id, to_annotation_id, direction, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    for (const connection of connections) {
+      console.log('Inserting connection:', connection);
+      const insertResult = insertStmt.run(
+        connection.id,
+        bookId,
+        connection.fromAnnotationId,
+        connection.toAnnotationId,
+        connection.direction,
+        connection.description,
+        connection.createdAt,
+        connection.updatedAt || connection.createdAt
+      );
+      console.log('Insert result:', insertResult);
+    }
+  });
+  
+  transaction();
+  console.log('Transaction completed');
 }

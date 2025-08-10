@@ -17,6 +17,17 @@ export interface Annotation {
   updatedAt?: string; // ISO string
 }
 
+export interface NoteConnection {
+  id: string;
+  bookId: string;
+  fromAnnotationId: string;
+  toAnnotationId: string;
+  direction: 'none' | 'bidirectional' | 'unidirectional-forward' | 'unidirectional-backward';
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Electron API 类型声明
 declare global {
   interface Window {
@@ -62,6 +73,13 @@ declare global {
           success: boolean;
           message: string;
         }>;
+      };
+      db: {
+        getNoteConnectionsByBookId: (bookId: string) => Promise<NoteConnection[]>;
+        createNoteConnection: (connection: Omit<NoteConnection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<NoteConnection>;
+        updateNoteConnection: (id: string, updates: Partial<Omit<NoteConnection, 'id' | 'bookId' | 'fromAnnotationId' | 'toAnnotationId' | 'createdAt'>>) => Promise<{ success: boolean; error?: string }>;
+        deleteNoteConnection: (id: string) => Promise<{ success: boolean; error?: string }>;
+        batchUpdateNoteConnections: (bookId: string, connections: NoteConnection[]) => Promise<{ success: boolean; error?: string }>;
       };
     };
   }

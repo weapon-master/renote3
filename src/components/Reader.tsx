@@ -196,6 +196,7 @@ const Reader: React.FC = () => {
               onCardClick={handleCardClick}
               isVisible={showNotesView}
               width={notesViewWidth}
+              bookId={bookId!}
             />
           </>
         )}

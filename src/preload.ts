@@ -48,6 +48,14 @@ contextBridge.exposeInMainWorld('electron', {
   migration: {
     check: () => ipcRenderer.invoke('check-migration'),
     perform: () => ipcRenderer.invoke('perform-migration')
+  },
+  // 数据库API
+  db: {
+    getNoteConnectionsByBookId: (bookId: string) => ipcRenderer.invoke('get-note-connections-by-book-id', bookId),
+    createNoteConnection: (connection: any) => ipcRenderer.invoke('create-note-connection', connection),
+    updateNoteConnection: (id: string, updates: any) => ipcRenderer.invoke('update-note-connection', id, updates),
+    deleteNoteConnection: (id: string) => ipcRenderer.invoke('delete-note-connection', id),
+    batchUpdateNoteConnections: (bookId: string, connections: any[]) => ipcRenderer.invoke('batch-update-note-connections', bookId, connections)
   }
 });
 

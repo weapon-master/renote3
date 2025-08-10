@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Annotation } from '../types';
+import { Annotation, NoteConnection } from '../types';
 import './NotesView.css';
 
 interface NoteCard {
@@ -23,9 +23,10 @@ interface NotesViewProps {
   onCardClick: (annotation: Annotation) => void;
   isVisible: boolean;
   width?: number;
+  bookId: string;
 }
 
-const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisible, width = 400 }) => {
+const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisible, width = 400, bookId }) => {
   const [noteCards, setNoteCards] = useState<NoteCard[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
@@ -41,6 +42,65 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
+  const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+
+  // Load connections from database
+  const loadConnections = useCallback(async () => {
+    try {
+      console.log('Loading connections for bookId:', bookId);
+      setIsLoadingConnections(true);
+      const electron = (window as any).electron;
+      if (electron && electron.db) {
+        const dbConnections = await electron.db.getNoteConnectionsByBookId(bookId);
+        console.log('Loaded connections from database:', dbConnections);
+        // Convert database connections to component format
+        const componentConnections: Connection[] = dbConnections.map((dbConn: NoteConnection) => ({
+          id: dbConn.id,
+          fromCardId: `card-${dbConn.fromAnnotationId}`,
+          toCardId: `card-${dbConn.toAnnotationId}`,
+          direction: dbConn.direction,
+          description: dbConn.description
+        }));
+        console.log('Converted to component connections:', componentConnections);
+        setConnections(componentConnections);
+      } else {
+        console.warn('Electron or electron.db not available');
+      }
+    } catch (error) {
+      console.warn('Failed to load connections from database:', error);
+    } finally {
+      setIsLoadingConnections(false);
+    }
+  }, [bookId]);
+
+  // Save connections to database
+  const saveConnections = useCallback(async (newConnections: Connection[]) => {
+    try {
+      console.log('Saving connections for bookId:', bookId, 'connections:', newConnections);
+      const electron = (window as any).electron;
+      if (electron && electron.db) {
+        // Convert component connections to database format
+        const dbConnections: NoteConnection[] = newConnections.map(conn => ({
+          id: conn.id,
+          bookId,
+          fromAnnotationId: conn.fromCardId.replace('card-', ''),
+          toAnnotationId: conn.toCardId.replace('card-', ''),
+          direction: conn.direction,
+          description: conn.description,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }));
+        
+        console.log('Saving to database:', dbConnections);
+        const result = await electron.db.batchUpdateNoteConnections(bookId, dbConnections);
+        console.log('Save result:', result);
+      } else {
+        console.warn('Electron or electron.db not available for saving');
+      }
+    } catch (error) {
+      console.warn('Failed to save connections to database:', error);
+    }
+  }, [bookId]);
 
   // Initialize note cards from annotations
   useEffect(() => {
@@ -53,11 +113,10 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     }));
     setNoteCards(newCards);
     
-    // Load saved positions and connections from localStorage
+    // Load saved positions from localStorage (keep positions in localStorage for now)
     try {
-      // Create a more stable key based on all annotation IDs
       const annotationIds = annotations.map(a => a.id).sort().join('-');
-      const storageKey = `notes-view-${annotationIds || 'empty'}`;
+      const storageKey = `notes-view-positions-${annotationIds || 'empty'}`;
       const savedData = localStorage.getItem(storageKey);
       
       if (savedData) {
@@ -68,14 +127,21 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
             return saved ? { ...card, position: saved.position } : card;
           }));
         }
-        if (parsed.connections) {
-          setConnections(parsed.connections);
-        }
       }
     } catch (error) {
-      console.warn('Failed to load saved notes view data:', error);
+      console.warn('Failed to load saved notes view positions:', error);
     }
   }, [annotations]);
+
+  // Load connections from database when annotations or bookId changes
+  useEffect(() => {
+    console.log('loadConnections useEffect triggered with annotations:', annotations.length, 'bookId:', bookId);
+    if (annotations.length > 0) {
+      loadConnections();
+    }
+  }, [annotations, bookId, loadConnections]);
+
+
 
   // Handle card dragging
   const handleMouseDown = useCallback((e: React.MouseEvent, cardId: string) => {
@@ -170,8 +236,13 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
         toCardId: hoveredCard,
         direction: 'none',
       };
-      setConnections(prev => [...prev, newConnection]);
-      
+      console.log('Creating connection via drag:', newConnection);
+      setConnections(prev => {
+        const newConnections = [...prev, newConnection];
+        console.log('Updated connections:', newConnections);
+        return newConnections;
+      });
+
       // Brief visual feedback for successful connection
       setTimeout(() => {
         setHoveredCard(null);
@@ -212,7 +283,12 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
           toCardId: cardId,
           direction: 'none',
         };
-        setConnections(prev => [...prev, newConnection]);
+        console.log('Creating connection via right-click:', newConnection);
+        setConnections(prev => {
+          const newConnections = [...prev, newConnection];
+          console.log('Updated connections:', newConnections);
+          return newConnections;
+        });
         setConnectionStart(null);
       } else {
         // Clicking the same card again cancels the connection
@@ -285,8 +361,8 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     }
   };
 
-  // Save notes view data to localStorage
-  const saveNotesViewData = useCallback(() => {
+  // Save positions to localStorage when cards change
+  useEffect(() => {
     if (annotations.length === 0) return;
     
     try {
@@ -295,21 +371,14 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
           annotationId: card.annotation.id,
           position: card.position,
         })),
-        connections,
       };
-      // Use the same key generation logic as in the load function
       const annotationIds = annotations.map(a => a.id).sort().join('-');
-      const storageKey = `notes-view-${annotationIds}`;
+      const storageKey = `notes-view-positions-${annotationIds}`;
       localStorage.setItem(storageKey, JSON.stringify(data));
     } catch (error) {
-      console.warn('Failed to save notes view data:', error);
+      console.warn('Failed to save notes view positions:', error);
     }
-  }, [noteCards, connections, annotations]);
-
-  // Save data when cards or connections change
-  useEffect(() => {
-    saveNotesViewData();
-  }, [saveNotesViewData]);
+  }, [noteCards, annotations]);
 
   // Clean up connections when annotations are removed
   useEffect(() => {
@@ -318,6 +387,14 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       validCardIds.has(conn.fromCardId) && validCardIds.has(conn.toCardId)
     ));
   }, [noteCards]);
+
+  // Save connections to database when connections change
+  useEffect(() => {
+    if (annotations.length === 0 || isLoadingConnections) return;
+    
+    console.log('Saving connections to database:', connections);
+    saveConnections(connections);
+  }, [connections, annotations, saveConnections, isLoadingConnections]);
 
   // Draw connections
   const drawConnections = () => {
