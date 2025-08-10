@@ -48,16 +48,16 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
       try {
         renditionRef.current.display(annotation.cfiRange);
         // Highlight the annotation briefly
-        renditionRef.current.annotations.add('highlight', annotation.cfiRange, {}, (e: any) => {
-          // Remove highlight after 2 seconds
-          setTimeout(() => {
-            try {
-              renditionRef.current?.annotations.remove(annotation.cfiRange, 'highlight');
-            } catch (error) {
-              console.warn('Failed to remove temporary highlight:', error);
-            }
-          }, 2000);
-        });
+        // renditionRef.current.annotations.add('highlight', annotation.cfiRange, {}, (e: any) => {
+        //   // Remove highlight after 2 seconds
+        //   setTimeout(() => {
+        //     try {
+        //       renditionRef.current?.annotations.remove(annotation.cfiRange, 'highlight');
+        //     } catch (error) {
+        //       console.warn('Failed to remove temporary highlight:', error);
+        //     }
+        //   }, 2000);
+        // });
       } catch (error) {
         console.warn('Failed to navigate to annotation:', error);
       }
