@@ -41,12 +41,13 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
     try {
       rendition.themes.default({
         '::selection': { background: 'rgba(0, 123, 255, 0.35)' },
-        '::-moz-selection': { background: 'rgba(0, 123, 255, 0.35)' },
         // ensure highlights can receive hover events
         '.epubjs-hl': { 'pointer-events': 'auto' },
         '.epub-highlight': { 'pointer-events': 'auto' },
       });
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to apply selection theme:', error);
+    }
     // Render existing highlights
     applyHighlights(rendition, annotations);
     // Selection handler
@@ -118,9 +119,16 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
       // Clear all then re-add to keep in sync
       // epub.js doesn't expose a simple clear-all; removing by cfi is fine
       anns.forEach((a) => {
-        rendition.annotations.remove(a.cfiRange, 'highlight');
+        try {
+          rendition.annotations.remove(a.cfiRange, 'highlight');
+        } catch (error) {
+          console.warn('Failed to remove highlight:', error);
+        }
       });
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to clear highlights:', error);
+    }
+    
     anns.forEach((a) => {
       try {
         rendition.annotations.add(
@@ -130,7 +138,9 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
           (e: any) => handleHighlightClick(e, a),
           'epub-highlight'
         );
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to add highlight:', error);
+      }
     });
   };
 
