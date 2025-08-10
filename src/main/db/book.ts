@@ -1,5 +1,5 @@
 import { getDatabase } from './common'
-import { Book, Annotation } from '../../types';
+import { Book } from '../../types';
 
 export function getAllBooks(): Book[] {
   const database = getDatabase();

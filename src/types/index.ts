@@ -62,18 +62,7 @@ declare global {
         }>;
         getLocalFileUrl: (filePath: string) => string;
       };
-      migration: {
-        check: () => Promise<{
-          needsMigration: boolean;
-          hasJsonFile: boolean;
-          jsonFileSize?: number;
-          bookCount?: number;
-        }>;
-        perform: () => Promise<{
-          success: boolean;
-          message: string;
-        }>;
-      };
+
       db: {
         getNoteConnectionsByBookId: (bookId: string) => Promise<NoteConnection[]>;
         createNoteConnection: (connection: Omit<NoteConnection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<NoteConnection>;

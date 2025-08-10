@@ -142,9 +142,17 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         doc.addEventListener('mousedown', handler);
         // No hover toolbar; toolbar is shown on click now
         // Best-effort removal when content is destroyed
-        try { contents.on && contents.on('destroy', () => doc.removeEventListener('mousedown', handler)); } catch {}
+        try { 
+          if (contents.on) {
+            contents.on('destroy', () => doc.removeEventListener('mousedown', handler));
+          }
+        } catch {
+          // Ignore errors
+        }
       });
-    } catch {}
+          } catch {
+        // Ignore errors
+      }
   };
 
   useEffect(() => {

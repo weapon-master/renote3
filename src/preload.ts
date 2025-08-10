@@ -44,11 +44,7 @@ contextBridge.exposeInMainWorld('electron', {
       return `epub-local:///${encoded}`;
     }
   },
-  // 迁移API
-  migration: {
-    check: () => ipcRenderer.invoke('check-migration'),
-    perform: () => ipcRenderer.invoke('perform-migration')
-  },
+
   // 数据库API
   db: {
     getNoteConnectionsByBookId: (bookId: string) => ipcRenderer.invoke('get-note-connections-by-book-id', bookId),

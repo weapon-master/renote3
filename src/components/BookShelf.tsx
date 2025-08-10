@@ -9,14 +9,14 @@ const BookShelf: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // 从本地存储加载书籍数据
-  const loadBooksFromStorage = async () => {
+  // 从数据库加载书籍数据
+  const loadBooksFromDatabase = async () => {
     try {
       setIsLoading(true);
       const electron = (window as any).electron;
       if (electron && electron.books) {
         const savedBooks = await electron.books.load();
-        console.log('从本地存储加载的书籍:', savedBooks);
+        console.log('从数据库加载的书籍:', savedBooks);
         setBooks(savedBooks || []);
       }
     } catch (error) {
@@ -26,30 +26,10 @@ const BookShelf: React.FC = () => {
     }
   };
 
-  // 保存书籍数据到本地存储
-  const saveBooksToStorage = async (booksToSave: Book[]) => {
-    try {
-      const electron = (window as any).electron;
-      if (electron && electron.books) {
-        await electron.books.save(booksToSave);
-        console.log('书籍数据已保存到本地存储');
-      }
-    } catch (error) {
-      console.error('保存书籍数据时出错:', error);
-    }
-  };
-
   // 组件挂载时加载书籍数据
   useEffect(() => {
-    loadBooksFromStorage();
+    loadBooksFromDatabase();
   }, []);
-
-  // 当书籍数据变化时自动保存
-  useEffect(() => {
-    if (!isLoading && books.length > 0) {
-      saveBooksToStorage(books);
-    }
-  }, [books, isLoading]);
 
   // 移除示例书籍的useEffect，因为我们现在从本地存储加载
 
@@ -75,12 +55,7 @@ const BookShelf: React.FC = () => {
       if (!existingBook) {
         const updatedBooks = [...books, newBook];
         setBooks(updatedBooks);
-        // 尝试保存到本地存储（如果有API的话）
-        if (electron && electron.books) {
-          electron.books.save(updatedBooks).catch((error: unknown) => {
-            console.error('保存书籍数据时出错:', error);
-          });
-        }
+        // 书籍现在通过数据库自动保存，无需手动保存
       } else {
         console.log('Book already exists, not adding duplicate');
       }

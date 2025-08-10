@@ -440,7 +440,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       const arrowLength = 10;
       const arrowAngle = Math.PI / 6;
 
-      let path = `M ${fromX} ${fromY} L ${toX} ${toY}`;
+      const path = `M ${fromX} ${fromY} L ${toX} ${toY}`;
       let arrowPath = '';
 
       if (connection.direction === 'bidirectional') {

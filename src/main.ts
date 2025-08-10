@@ -3,7 +3,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
 import EPub from 'epub2';
-const pdfParse = require('pdf-parse');
+import pdfParse from 'pdf-parse';
 import StreamZip from 'node-stream-zip';
 import { 
   initDatabase, 
@@ -13,14 +13,14 @@ import {
   updateBook, 
   deleteBook, 
   updateBookAnnotations,
-  migrateFromJson,
+
   getNoteConnectionsByBookId,
   createNoteConnection,
   updateNoteConnection,
   deleteNoteConnection,
   batchUpdateNoteConnections
 } from './main/db';
-import { migrateFromJsonFile, needsMigration, getMigrationInfo } from './main/migration';
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -435,13 +435,10 @@ ipcMain.handle('load-books', async () => {
   }
 });
 
-// 保存书籍数据 (保持兼容性，但实际使用数据库)
-ipcMain.handle('save-books', async (event, books: any[]) => {
+// 保存书籍数据 (已弃用，现在使用数据库)
+ipcMain.handle('save-books', async () => {
   try {
-    // 如果传入的是完整的书籍数组，则迁移到数据库
-    if (Array.isArray(books) && books.length > 0) {
-      migrateFromJson(books);
-    }
+    console.log('save-books API 已弃用，现在使用数据库存储');
     return { success: true };
   } catch (error) {
     console.error('保存书籍数据时出错:', error);
@@ -487,29 +484,7 @@ ipcMain.handle('update-book', async (event, bookId: string, updates: any) => {
   }
 });
 
-// 迁移相关的IPC处理器
-ipcMain.handle('check-migration', async () => {
-  try {
-    const migrationInfo = getMigrationInfo();
-    return { 
-      needsMigration: needsMigration(),
-      ...migrationInfo 
-    };
-  } catch (error) {
-    console.error('检查迁移状态时出错:', error);
-    return { needsMigration: false, hasJsonFile: false };
-  }
-});
 
-ipcMain.handle('perform-migration', async () => {
-  try {
-    const result = await migrateFromJsonFile();
-    return result;
-  } catch (error) {
-    console.error('执行迁移时出错:', error);
-    return { success: false, message: `迁移失败: ${error.message}` };
-  }
-});
 
 // 注册数据库相关的IPC处理器
 function registerDatabaseHandlers() {
@@ -604,7 +579,7 @@ function registerEpubHandlers() {
       console.log('EPUB 所有属性:', Object.keys(epub));
       
       // 尝试不同的章节获取方法
-      let chapters = [];
+      const chapters = [];
       
       // 方法1: 使用 spine (这是EPUB的标准章节顺序)
       if (epub.spine && epub.spine.length > 0) {
