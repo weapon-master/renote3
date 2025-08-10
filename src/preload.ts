@@ -43,6 +43,11 @@ contextBridge.exposeInMainWorld('electron', {
       const encoded = encodeURIComponent(filePath);
       return `epub-local:///${encoded}`;
     }
+  },
+  // 迁移API
+  migration: {
+    check: () => ipcRenderer.invoke('check-migration'),
+    perform: () => ipcRenderer.invoke('perform-migration')
   }
 });
 

@@ -5,6 +5,17 @@ import fs from 'fs';
 import EPub from 'epub2';
 const pdfParse = require('pdf-parse');
 import StreamZip from 'node-stream-zip';
+import { 
+  initDatabase, 
+  closeDatabase, 
+  getAllBooks, 
+  createBook, 
+  updateBook, 
+  deleteBook, 
+  updateBookAnnotations,
+  migrateFromJson 
+} from './main/db';
+import { migrateFromJsonFile, needsMigration, getMigrationInfo } from './main/migration';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -15,37 +26,7 @@ if (started) {
 app.commandLine.appendSwitch('disable-features', 'Autofill,TranslateUI');
 app.commandLine.appendSwitch('disable-web-security');
 
-// 书籍数据文件路径
-const BOOKS_DATA_FILE = path.join(app.getPath('userData'), 'books.json');
-
-// 加载保存的书籍数据
-function loadBooksData(): any[] {
-  try {
-    if (fs.existsSync(BOOKS_DATA_FILE)) {
-      const data = fs.readFileSync(BOOKS_DATA_FILE, 'utf8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('加载书籍数据时出错:', error);
-  }
-  return [];
-}
-
-// 保存书籍数据到本地文件
-function saveBooksData(books: any[]): void {
-  try {
-    // 确保用户数据目录存在
-    const userDataDir = path.dirname(BOOKS_DATA_FILE);
-    if (!fs.existsSync(userDataDir)) {
-      fs.mkdirSync(userDataDir, { recursive: true });
-    }
-    
-    fs.writeFileSync(BOOKS_DATA_FILE, JSON.stringify(books, null, 2), 'utf8');
-    console.log(`书籍数据已保存到: ${BOOKS_DATA_FILE}`);
-  } catch (error) {
-    console.error('保存书籍数据时出错:', error);
-  }
-}
+// Database will be initialized in app.on('ready')
 
 const createWindow = () => {
   // Create the browser window.
@@ -74,6 +55,14 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
+  // 初始化数据库
+  try {
+    initDatabase();
+    console.log('数据库初始化成功');
+  } catch (error) {
+    console.error('数据库初始化失败:', error);
+  }
+  
   // 注册EPUB相关的IPC处理器
   registerEpubHandlers();
   // 注册自定义协议以安全地从本地文件系统提供 EPUB 资源
@@ -111,6 +100,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  // 关闭数据库连接
+  closeDatabase();
 });
 
 app.on('activate', () => {
@@ -401,11 +395,21 @@ ipcMain.on('import-books', async (event, args) => {
       }
     }
     
-    // 保存新导入的书籍到本地存储
+    // 保存新导入的书籍到数据库
     if (books.length > 0) {
-      const existingBooks = loadBooksData();
-      const updatedBooks = [...existingBooks, ...books];
-      saveBooksData(updatedBooks);
+      for (const book of books) {
+        try {
+          createBook({
+            title: book.title,
+            coverPath: book.coverPath,
+            filePath: book.filePath,
+            author: book.author,
+            description: book.description
+          });
+        } catch (error) {
+          console.error(`Error saving book ${book.title} to database:`, error);
+        }
+      }
     }
     
     event.reply('import-books-result', books);
@@ -414,25 +418,40 @@ ipcMain.on('import-books', async (event, args) => {
 
 // 加载保存的书籍数据
 ipcMain.handle('load-books', async () => {
-  const books = loadBooksData();
-  console.log(`加载了 ${books.length} 本书籍`);
-  return books;
+  try {
+    const books = getAllBooks();
+    console.log(`从数据库加载了 ${books.length} 本书籍`);
+    return books;
+  } catch (error) {
+    console.error('从数据库加载书籍时出错:', error);
+    return [];
+  }
 });
 
-// 保存书籍数据
+// 保存书籍数据 (保持兼容性，但实际使用数据库)
 ipcMain.handle('save-books', async (event, books: any[]) => {
-  saveBooksData(books);
-  return { success: true };
+  try {
+    // 如果传入的是完整的书籍数组，则迁移到数据库
+    if (Array.isArray(books) && books.length > 0) {
+      migrateFromJson(books);
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('保存书籍数据时出错:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // 删除书籍
 ipcMain.handle('delete-book', async (event, bookId: string) => {
   try {
-    const existingBooks = loadBooksData();
-    const updatedBooks = existingBooks.filter(book => book.id !== bookId);
-    saveBooksData(updatedBooks);
-    console.log(`书籍 ${bookId} 已删除`);
-    return { success: true };
+    const success = deleteBook(bookId);
+    if (success) {
+      console.log(`书籍 ${bookId} 已从数据库删除`);
+      return { success: true };
+    } else {
+      return { success: false, error: '书籍不存在' };
+    }
   } catch (error) {
     console.error('删除书籍时出错:', error);
     return { success: false, error: error.message };
@@ -442,16 +461,46 @@ ipcMain.handle('delete-book', async (event, bookId: string) => {
 // 更新书籍信息
 ipcMain.handle('update-book', async (event, bookId: string, updates: any) => {
   try {
-    const existingBooks = loadBooksData();
-    const updatedBooks = existingBooks.map(book => 
-      book.id === bookId ? { ...book, ...updates } : book
-    );
-    saveBooksData(updatedBooks);
+    // 如果更新包含annotations，使用专门的函数
+    if (updates.annotations !== undefined) {
+      updateBookAnnotations(bookId, updates.annotations);
+      // 移除annotations，只更新其他字段
+      const { annotations, ...otherUpdates } = updates;
+      if (Object.keys(otherUpdates).length > 0) {
+        updateBook(bookId, otherUpdates);
+      }
+    } else {
+      updateBook(bookId, updates);
+    }
     console.log(`书籍 ${bookId} 已更新`);
     return { success: true };
   } catch (error) {
     console.error('更新书籍时出错:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// 迁移相关的IPC处理器
+ipcMain.handle('check-migration', async () => {
+  try {
+    const migrationInfo = getMigrationInfo();
+    return { 
+      needsMigration: needsMigration(),
+      ...migrationInfo 
+    };
+  } catch (error) {
+    console.error('检查迁移状态时出错:', error);
+    return { needsMigration: false, hasJsonFile: false };
+  }
+});
+
+ipcMain.handle('perform-migration', async () => {
+  try {
+    const result = await migrateFromJsonFile();
+    return result;
+  } catch (error) {
+    console.error('执行迁移时出错:', error);
+    return { success: false, message: `迁移失败: ${error.message}` };
   }
 });
 
