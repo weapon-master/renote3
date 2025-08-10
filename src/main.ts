@@ -13,6 +13,7 @@ import {
   updateBook, 
   deleteBook, 
   updateBookAnnotations,
+  updateReadingProgress,
 
   getNoteConnectionsByBookId,
   createNoteConnection,
@@ -582,6 +583,22 @@ function registerDatabaseHandlers() {
       return { success: true };
     } catch (error) {
       console.error('批量更新注释视觉属性时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 更新阅读进度
+  ipcMain.handle('update-reading-progress', async (event, bookId: string, progress: string) => {
+    try {
+      const success = updateReadingProgress(bookId, progress);
+      if (success) {
+        console.log(`书籍 ${bookId} 的阅读进度已更新: ${progress}`);
+        return { success: true };
+      } else {
+        return { success: false, error: '书籍不存在' };
+      }
+    } catch (error) {
+      console.error('更新阅读进度时出错:', error);
       return { success: false, error: error.message };
     }
   });

@@ -11,7 +11,7 @@ interface EpubReaderProps {
 }
 
 const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnnotationsChange }) => {
-  const [location, setLocation] = useState<string | number>(0);
+  const [location, setLocation] = useState<string | number>(book.readingProgress || 0);
   const [annotations, setAnnotations] = useState<Annotation[]>(book.annotations || []);
   const renditionRef = useRef<any>(null);
   const [pendingSelection, setPendingSelection] = useState<{ id?: string; cfiRange: string; text: string } | null>(null);
@@ -34,6 +34,12 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
 
   const handleLocationChange = (epubcfi: string) => {
     setLocation(epubcfi);
+    // Save reading progress to database
+    if (window.electron?.db?.updateReadingProgress) {
+      window.electron.db.updateReadingProgress(book.id, epubcfi).catch((error: any) => {
+        console.error('Failed to save reading progress:', error);
+      });
+    }
   };
 
   // Navigate to annotation location

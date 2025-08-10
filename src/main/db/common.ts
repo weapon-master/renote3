@@ -27,6 +27,7 @@ export function initDatabase(): void {
         file_path TEXT NOT NULL UNIQUE,
         author TEXT,
         description TEXT,
+        reading_progress TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -92,6 +93,20 @@ export function initDatabase(): void {
       }
     } catch (error) {
       console.warn('Annotations table migration failed (columns may already exist):', error);
+    }
+
+    // Migrate existing books table to include reading progress
+    try {
+      const hasReadingProgress = db.prepare("PRAGMA table_info(books)").all().some((col: any) => col.name === 'reading_progress');
+      if (!hasReadingProgress) {
+        console.log('Migrating books table to include reading progress...');
+        db.exec(`
+          ALTER TABLE books ADD COLUMN reading_progress TEXT;
+        `);
+        console.log('Books table migration completed');
+      }
+    } catch (error) {
+      console.warn('Books table migration failed (column may already exist):', error);
     }
     
     // Check if database file exists

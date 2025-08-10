@@ -53,7 +53,8 @@ contextBridge.exposeInMainWorld('electron', {
     deleteNoteConnection: (id: string) => ipcRenderer.invoke('delete-note-connection', id),
     batchUpdateNoteConnections: (bookId: string, connections: any[]) => ipcRenderer.invoke('batch-update-note-connections', bookId, connections),
     updateAnnotation: (id: string, updates: any) => ipcRenderer.invoke('update-annotation', id, updates),
-    batchUpdateAnnotationVisuals: (bookId: string, annotations: any[]) => ipcRenderer.invoke('batch-update-annotation-visuals', bookId, annotations)
+    batchUpdateAnnotationVisuals: (bookId: string, annotations: any[]) => ipcRenderer.invoke('batch-update-annotation-visuals', bookId, annotations),
+    updateReadingProgress: (bookId: string, progress: string) => ipcRenderer.invoke('update-reading-progress', bookId, progress)
   }
 });
 

@@ -5,7 +5,7 @@ export function getAllBooks(): Book[] {
   const database = getDatabase();
   
   const booksStmt = database.prepare(`
-    SELECT id, title, cover_path, file_path, author, description, created_at, updated_at
+    SELECT id, title, cover_path, file_path, author, description, reading_progress, created_at, updated_at
     FROM books
     ORDER BY created_at DESC
   `);
@@ -26,6 +26,7 @@ export function getAllBooks(): Book[] {
     filePath: book.file_path,
     author: book.author,
     description: book.description,
+    readingProgress: book.reading_progress || undefined,
     annotations: annotationsStmt.all(book.id).map((ann: any) => ({
       id: ann.id,
       cfiRange: ann.cfi_range,
@@ -44,7 +45,7 @@ export function getBookById(id: string): Book | null {
   const database = getDatabase();
   
   const bookStmt = database.prepare(`
-    SELECT id, title, cover_path, file_path, author, description, created_at, updated_at
+    SELECT id, title, cover_path, file_path, author, description, reading_progress, created_at, updated_at
     FROM books
     WHERE id = ?
   `);
@@ -69,6 +70,7 @@ export function getBookById(id: string): Book | null {
     filePath: book.file_path,
     author: book.author,
     description: book.description,
+    readingProgress: book.reading_progress || undefined,
     annotations: annotationsStmt.all(id).map((ann: any) => ({
       id: ann.id,
       cfiRange: ann.cfi_range,
@@ -84,8 +86,8 @@ export function createBook(book: Omit<Book, 'id' | 'annotations'>): Book {
   const database = getDatabase();
   
   const insertStmt = database.prepare(`
-    INSERT INTO books (id, title, cover_path, file_path, author, description)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO books (id, title, cover_path, file_path, author, description, reading_progress)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   
   const bookId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${book.filePath}`;
@@ -96,7 +98,8 @@ export function createBook(book: Omit<Book, 'id' | 'annotations'>): Book {
     book.coverPath,
     book.filePath,
     book.author,
-    book.description
+    book.description,
+    book.readingProgress || null
   );
   
   return {
@@ -106,6 +109,7 @@ export function createBook(book: Omit<Book, 'id' | 'annotations'>): Book {
     filePath: book.filePath,
     author: book.author,
     description: book.description,
+    readingProgress: book.readingProgress,
     annotations: []
   };
 }
@@ -136,6 +140,10 @@ export function updateBook(id: string, updates: Partial<Omit<Book, 'id' | 'annot
     fields.push('description = ?');
     values.push(updates.description);
   }
+  if (updates.readingProgress !== undefined) {
+    fields.push('reading_progress = ?');
+    values.push(updates.readingProgress);
+  }
   
   if (fields.length === 0) {
     return false;
@@ -160,5 +168,18 @@ export function deleteBook(id: string): boolean {
   const deleteStmt = database.prepare('DELETE FROM books WHERE id = ?');
   const result = deleteStmt.run(id);
   
+  return result.changes > 0;
+}
+
+export function updateReadingProgress(bookId: string, progress: string): boolean {
+  const database = getDatabase();
+  
+  const updateStmt = database.prepare(`
+    UPDATE books
+    SET reading_progress = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  
+  const result = updateStmt.run(progress, bookId);
   return result.changes > 0;
 }

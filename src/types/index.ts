@@ -6,6 +6,7 @@ export interface Book {
   author?: string;
   description?: string;
   annotations?: Annotation[];
+  readingProgress?: string; // CFI string for current reading position
 }
 
 export interface Annotation {
@@ -74,6 +75,7 @@ declare global {
         batchUpdateNoteConnections: (bookId: string, connections: NoteConnection[]) => Promise<{ success: boolean; error?: string }>;
         updateAnnotation: (id: string, updates: Partial<Omit<Annotation, 'id' | 'createdAt'>>) => Promise<{ success: boolean; error?: string }>;
         batchUpdateAnnotationVisuals: (bookId: string, annotations: Array<{ id: string; position?: { x: number; y: number }; width?: number; height?: number }>) => Promise<{ success: boolean; error?: string }>;
+        updateReadingProgress: (bookId: string, progress: string) => Promise<{ success: boolean; error?: string }>;
       };
     };
   }
