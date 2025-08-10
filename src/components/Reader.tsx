@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Book } from '../types';
+import { Book, Annotation } from '../types';
 import EpubReader from './EpubReader';
+import NotesView from './NotesView';
 import '../components/Reader.css';
 
 const Reader: React.FC = () => {
@@ -9,6 +10,8 @@ const Reader: React.FC = () => {
   const navigate = useNavigate();
   const [book, setBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showNotesView, setShowNotesView] = useState(false);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
 
   useEffect(() => {
     const loadBook = async () => {
@@ -25,6 +28,7 @@ const Reader: React.FC = () => {
           const foundBook = savedBooks.find((b: Book) => b.id === bookId);
           if (foundBook) {
             setBook(foundBook);
+            setAnnotations(foundBook.annotations || []);
           } else {
             console.error('未找到指定的书籍');
             navigate('/bookshelf');
@@ -46,6 +50,17 @@ const Reader: React.FC = () => {
 
   const handleBack = () => {
     navigate('/bookshelf');
+  };
+
+  const handleNotesViewToggle = () => {
+    setShowNotesView(!showNotesView);
+  };
+
+  const handleCardClick = (annotation: Annotation) => {
+    // Navigate to the annotation location in the reader
+    if ((window as any).navigateToAnnotation) {
+      (window as any).navigateToAnnotation(annotation);
+    }
   };
 
   if (isLoading) {
@@ -81,21 +96,37 @@ const Reader: React.FC = () => {
       <header>
         <button id="back-btn" onClick={handleBack}>返回书架</button>
         <h1 id="reader-title">{book.title}</h1>
+        <button 
+          id="notes-toggle-btn" 
+          onClick={handleNotesViewToggle}
+          className={showNotesView ? 'active' : ''}
+        >
+          {showNotesView ? '📝 隐藏笔记' : '📝 显示笔记'}
+        </button>
       </header>
-      <div id="reader-content">
-        {book.filePath.toLowerCase().endsWith('.epub') ? (
-          <EpubReader book={book} />
-        ) : (
-          <div className="unsupported-format">
-            <p>📖 书籍 "{book.title}" 的内容将显示在这里。</p>
-            <p>文件路径: {book.filePath}</p>
-            <p className="format-info">
-              当前文件格式: {book.filePath.split('.').pop()?.toUpperCase()}
-            </p>
-            <p className="support-info">
-              目前支持 EPUB 格式的阅读。其他格式将在后续版本中支持。
-            </p>
-          </div>
+      <div id="reader-content" className={showNotesView ? 'with-notes' : ''}>
+        <div className="reader-main">
+          {book.filePath.toLowerCase().endsWith('.epub') ? (
+            <EpubReader book={book} onAnnotationClick={handleCardClick} />
+          ) : (
+            <div className="unsupported-format">
+              <p>📖 书籍 "{book.title}" 的内容将显示在这里。</p>
+              <p>文件路径: {book.filePath}</p>
+              <p className="format-info">
+                当前文件格式: {book.filePath.split('.').pop()?.toUpperCase()}
+              </p>
+              <p className="support-info">
+                目前支持 EPUB 格式的阅读。其他格式将在后续版本中支持。
+              </p>
+            </div>
+          )}
+        </div>
+        {showNotesView && (
+          <NotesView 
+            annotations={annotations}
+            onCardClick={handleCardClick}
+            isVisible={showNotesView}
+          />
         )}
       </div>
     </div>

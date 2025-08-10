@@ -1,9 +1,58 @@
+#reader header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+#notes-toggle-btn {
+  margin-left: auto;
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+#notes-toggle-btn:hover {
+  background: #0056b3;
+}
+
+#notes-toggle-btn.active {
+  background: #28a745;
+}
+
+#notes-toggle-btn.active:hover {
+  background: #218838;
+}
+
 #reader-content {
   flex: 1;
   background-color: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#reader-content.with-notes {
+  display: flex;
+  flex-direction: row;
+  padding: 0;
+  gap: 0;
+}
+
+.reader-main {
+  flex: 1;
+  padding: 20px;
   overflow-y: auto;
 }
 

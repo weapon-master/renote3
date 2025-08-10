@@ -6,9 +6,10 @@ import './EpubReader.css';
 
 interface EpubReaderProps {
   book: Book;
+  onAnnotationClick?: (annotation: Annotation) => void;
 }
 
-const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
+const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick }) => {
   const [location, setLocation] = useState<string | number>(0);
   const [annotations, setAnnotations] = useState<Annotation[]>(book.annotations || []);
   const renditionRef = useRef<any>(null);
@@ -33,6 +34,36 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book }) => {
   const handleLocationChange = (epubcfi: string) => {
     setLocation(epubcfi);
   };
+
+  // Navigate to annotation location
+  const navigateToAnnotation = (annotation: Annotation) => {
+    if (renditionRef.current) {
+      try {
+        renditionRef.current.display(annotation.cfiRange);
+        // Highlight the annotation briefly
+        renditionRef.current.annotations.add('highlight', annotation.cfiRange, {}, (e: any) => {
+          // Remove highlight after 2 seconds
+          setTimeout(() => {
+            try {
+              renditionRef.current?.annotations.remove(annotation.cfiRange, 'highlight');
+            } catch (error) {
+              console.warn('Failed to remove temporary highlight:', error);
+            }
+          }, 2000);
+        });
+      } catch (error) {
+        console.warn('Failed to navigate to annotation:', error);
+      }
+    }
+  };
+
+  // Expose navigation function to parent component
+  useEffect(() => {
+    if (onAnnotationClick) {
+      // Store the navigation function in a way that parent can access
+      (window as any).navigateToAnnotation = navigateToAnnotation;
+    }
+  }, [onAnnotationClick, renditionRef.current]);
 
   // When ReactReader gives us the rendition, wire selection handler and render highlights
   const handleRendition = (rendition: any) => {
