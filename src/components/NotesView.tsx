@@ -22,9 +22,10 @@ interface NotesViewProps {
   annotations: Annotation[];
   onCardClick: (annotation: Annotation) => void;
   isVisible: boolean;
+  width?: number;
 }
 
-const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisible }) => {
+const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisible, width = 400 }) => {
   const [noteCards, setNoteCards] = useState<NoteCard[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
@@ -51,7 +52,11 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     
     // Load saved positions and connections from localStorage
     try {
-      const savedData = localStorage.getItem(`notes-view-${annotations[0]?.id || 'default'}`);
+      // Create a more stable key based on all annotation IDs
+      const annotationIds = annotations.map(a => a.id).sort().join('-');
+      const storageKey = `notes-view-${annotationIds || 'empty'}`;
+      const savedData = localStorage.getItem(storageKey);
+      
       if (savedData) {
         const parsed = JSON.parse(savedData);
         if (parsed.cards) {
@@ -215,7 +220,10 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
         })),
         connections,
       };
-      localStorage.setItem(`notes-view-${annotations[0].id}`, JSON.stringify(data));
+      // Use the same key generation logic as in the load function
+      const annotationIds = annotations.map(a => a.id).sort().join('-');
+      const storageKey = `notes-view-${annotationIds}`;
+      localStorage.setItem(storageKey, JSON.stringify(data));
     } catch (error) {
       console.warn('Failed to save notes view data:', error);
     }
@@ -225,6 +233,14 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   useEffect(() => {
     saveNotesViewData();
   }, [saveNotesViewData]);
+
+  // Clean up connections when annotations are removed
+  useEffect(() => {
+    const validCardIds = new Set(noteCards.map(card => card.id));
+    setConnections(prev => prev.filter(conn => 
+      validCardIds.has(conn.fromCardId) && validCardIds.has(conn.toCardId)
+    ));
+  }, [noteCards]);
 
   // Draw connections
   const drawConnections = () => {
@@ -307,7 +323,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   if (!isVisible) return null;
 
   return (
-    <div className="notes-view">
+    <div className="notes-view" style={{ width: `${width}px` }}>
       <div className="notes-header">
         <h3>Notes View</h3>
         <div className="notes-controls">

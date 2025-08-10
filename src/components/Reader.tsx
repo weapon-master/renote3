@@ -12,6 +12,11 @@ const Reader: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showNotesView, setShowNotesView] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [notesViewWidth, setNotesViewWidth] = useState(() => {
+    const saved = localStorage.getItem('notes-view-width');
+    return saved ? parseInt(saved, 10) : 400;
+  });
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     const loadBook = async () => {
@@ -48,6 +53,13 @@ const Reader: React.FC = () => {
     loadBook();
   }, [bookId, navigate]);
 
+  // Sync annotations when book annotations change
+  useEffect(() => {
+    if (book) {
+      setAnnotations(book.annotations || []);
+    }
+  }, [book?.annotations]);
+
   const handleBack = () => {
     navigate('/bookshelf');
   };
@@ -62,6 +74,48 @@ const Reader: React.FC = () => {
       (window as any).navigateToAnnotation(annotation);
     }
   };
+
+  const handleAnnotationsChange = (newAnnotations: Annotation[]) => {
+    setAnnotations(newAnnotations);
+  };
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    const containerWidth = window.innerWidth;
+    const minWidth = 200;
+    const maxWidth = containerWidth * 0.8;
+    const newWidth = containerWidth - e.clientX;
+    
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setNotesViewWidth(newWidth);
+      localStorage.setItem('notes-view-width', newWidth.toString());
+    }
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing]);
 
   if (isLoading) {
     return (
@@ -104,10 +158,14 @@ const Reader: React.FC = () => {
           {showNotesView ? '📝 隐藏笔记' : '📝 显示笔记'}
         </button>
       </header>
-      <div id="reader-content" className={showNotesView ? 'with-notes' : ''}>
+      <div id="reader-content" className={`${showNotesView ? 'with-notes' : ''} ${isResizing ? 'resizing' : ''}`}>
         <div className="reader-main">
           {book.filePath.toLowerCase().endsWith('.epub') ? (
-            <EpubReader book={book} onAnnotationClick={handleCardClick} />
+            <EpubReader 
+              book={book} 
+              onAnnotationClick={handleCardClick}
+              onAnnotationsChange={handleAnnotationsChange}
+            />
           ) : (
             <div className="unsupported-format">
               <p>📖 书籍 "{book.title}" 的内容将显示在这里。</p>
@@ -122,11 +180,24 @@ const Reader: React.FC = () => {
           )}
         </div>
         {showNotesView && (
-          <NotesView 
-            annotations={annotations}
-            onCardClick={handleCardClick}
-            isVisible={showNotesView}
-          />
+          <>
+            <div 
+              className="resize-handle"
+              onMouseDown={handleResizeStart}
+              onDoubleClick={() => {
+                setNotesViewWidth(400);
+                localStorage.setItem('notes-view-width', '400');
+              }}
+              style={{ cursor: 'col-resize' }}
+              title="Drag to resize, double-click to reset"
+            />
+            <NotesView 
+              annotations={annotations}
+              onCardClick={handleCardClick}
+              isVisible={showNotesView}
+              width={notesViewWidth}
+            />
+          </>
         )}
       </div>
     </div>

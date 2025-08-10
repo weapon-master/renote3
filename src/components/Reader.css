@@ -56,6 +56,66 @@
   overflow-y: auto;
 }
 
+.resize-handle {
+  width: 6px;
+  background: #e0e0e0;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+  margin: 0 -1px;
+}
+
+.resize-handle:hover {
+  background: #007bff;
+}
+
+.resize-handle:active {
+  background: #0056b3;
+}
+
+/* Add a visual indicator for the resize handle */
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 20px;
+  background: #999;
+  border-radius: 1px;
+}
+
+.resize-handle:hover::after {
+  background: #007bff;
+}
+
+/* Prevent text selection during resize */
+#reader-content.with-notes.resizing {
+  user-select: none;
+}
+
+#reader-content.with-notes.resizing * {
+  user-select: none;
+}
+
+/* Responsive behavior for smaller screens */
+@media (max-width: 768px) {
+  .resize-handle {
+    width: 8px;
+  }
+  
+  #reader-content.with-notes {
+    flex-direction: column;
+  }
+  
+  .notes-view {
+    width: 100% !important;
+    height: 50vh;
+  }
+}
+
 .unsupported-format {
   text-align: center;
   padding: 40px 20px;

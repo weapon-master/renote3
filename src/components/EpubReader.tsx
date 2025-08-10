@@ -7,9 +7,10 @@ import './EpubReader.css';
 interface EpubReaderProps {
   book: Book;
   onAnnotationClick?: (annotation: Annotation) => void;
+  onAnnotationsChange?: (annotations: Annotation[]) => void;
 }
 
-const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick }) => {
+const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnnotationsChange }) => {
   const [location, setLocation] = useState<string | number>(0);
   const [annotations, setAnnotations] = useState<Annotation[]>(book.annotations || []);
   const renditionRef = useRef<any>(null);
@@ -64,6 +65,13 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick }) => {
       (window as any).navigateToAnnotation = navigateToAnnotation;
     }
   }, [onAnnotationClick, renditionRef.current]);
+
+  // Notify parent component when annotations change
+  useEffect(() => {
+    if (onAnnotationsChange) {
+      onAnnotationsChange(annotations);
+    }
+  }, [annotations, onAnnotationsChange]);
 
   // When ReactReader gives us the rendition, wire selection handler and render highlights
   const handleRendition = (rendition: any) => {
