@@ -14,7 +14,7 @@ interface Connection {
   id: string;
   fromCardId: string;
   toCardId: string;
-  direction: 'none' | 'bidirectional' | 'unidirectional';
+  direction: 'none' | 'bidirectional' | 'unidirectional-forward' | 'unidirectional-backward';
   description?: string;
 }
 
@@ -247,7 +247,12 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     console.log('Right-clicked connection:', connectionId);
     setConnections(prev => prev.map(conn => {
       if (conn.id === connectionId) {
-        const directions: Array<'none' | 'bidirectional' | 'unidirectional'> = ['none', 'bidirectional', 'unidirectional'];
+        const directions: Array<'none' | 'bidirectional' | 'unidirectional-forward' | 'unidirectional-backward'> = [
+          'none', 
+          'unidirectional-forward', 
+          'unidirectional-backward', 
+          'bidirectional'
+        ];
         const currentIndex = directions.indexOf(conn.direction);
         const nextIndex = (currentIndex + 1) % directions.length;
         return { ...conn, direction: directions[nextIndex] };
@@ -355,40 +360,74 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
         const arrow4Y = toY - Math.sin(angle - arrowAngle) * arrowLength;
         
         arrowPath = `M ${arrow1X} ${arrow1Y} L ${fromX} ${fromY} L ${arrow2X} ${arrow2Y} M ${arrow3X} ${arrow3Y} L ${toX} ${toY} L ${arrow4X} ${arrow4Y}`;
-      } else if (connection.direction === 'unidirectional') {
-        // Draw arrow at the end
+      } else if (connection.direction === 'unidirectional-forward') {
+        // Draw arrow pointing from source to target (forward direction)
         const arrow1X = toX - Math.cos(angle + arrowAngle) * arrowLength;
         const arrow1Y = toY - Math.sin(angle + arrowAngle) * arrowLength;
         const arrow2X = toX - Math.cos(angle - arrowAngle) * arrowLength;
         const arrow2Y = toY - Math.sin(angle - arrowAngle) * arrowLength;
         
         arrowPath = `M ${arrow1X} ${arrow1Y} L ${toX} ${toY} L ${arrow2X} ${arrow2Y}`;
+      } else if (connection.direction === 'unidirectional-backward') {
+        // Draw arrow pointing from target back to source (backward direction)
+        const arrow1X = fromX + Math.cos(angle + arrowAngle) * arrowLength;
+        const arrow1Y = fromY + Math.sin(angle + arrowAngle) * arrowLength;
+        const arrow2X = fromX + Math.cos(angle - arrowAngle) * arrowLength;
+        const arrow2Y = fromY + Math.sin(angle - arrowAngle) * arrowLength;
+        
+        arrowPath = `M ${arrow1X} ${arrow1Y} L ${fromX} ${fromY} L ${arrow2X} ${arrow2Y}`;
       }
 
-             return (
-         <g key={connection.id}>
-           <path
-             d={path}
-             stroke="#666"
-             strokeWidth="2"
-             fill="none"
-             onDoubleClick={(e) => {
-               e.preventDefault();
-               e.stopPropagation();
-               handleConnectionDoubleClick(connection.id);
-             }}
-             onContextMenu={(e) => handleConnectionRightClick(e, connection.id)}
-             style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-           />
-           {arrowPath && (
-             <path
-               d={arrowPath}
-               stroke="#666"
-               strokeWidth="2"
-               fill="none"
-               style={{ pointerEvents: 'auto' }}
-             />
-           )}
+                           return (
+          <g key={connection.id}>
+            {/* Invisible wider stroke for easier interaction */}
+            <path
+              d={path}
+              stroke="transparent"
+              strokeWidth="12"
+              fill="none"
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleConnectionDoubleClick(connection.id);
+              }}
+              onContextMenu={(e) => handleConnectionRightClick(e, connection.id)}
+              style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+            />
+            {/* Visible thin stroke */}
+            <path
+              d={path}
+              stroke="#666"
+              strokeWidth="2"
+              fill="none"
+              style={{ pointerEvents: 'none' }}
+            />
+            {arrowPath && (
+              <>
+                {/* Invisible wider stroke for arrow interaction */}
+                <path
+                  d={arrowPath}
+                  stroke="transparent"
+                  strokeWidth="12"
+                  fill="none"
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleConnectionDoubleClick(connection.id);
+                  }}
+                  onContextMenu={(e) => handleConnectionRightClick(e, connection.id)}
+                  style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                />
+                {/* Visible thin stroke for arrows */}
+                <path
+                  d={arrowPath}
+                  stroke="#666"
+                  strokeWidth="2"
+                  fill="none"
+                  style={{ pointerEvents: 'none' }}
+                />
+              </>
+            )}
                      {connection.description && (
              <text
                x={(fromCenterX + toCenterX) / 2}

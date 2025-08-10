@@ -144,7 +144,8 @@
   cursor: pointer;
 }
 
-.connections-layer path:hover {
+/* Hover effect for the invisible interaction paths */
+.connections-layer path[stroke="transparent"]:hover + path {
   stroke-width: 3;
   stroke: #007bff;
   filter: drop-shadow(0 0 2px rgba(0, 123, 255, 0.5));
