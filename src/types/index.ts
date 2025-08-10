@@ -13,6 +13,9 @@ export interface Annotation {
   cfiRange: string;
   text: string; // selected text snapshot
   note: string;
+  position?: { x: number; y: number };  // Visual position for note cards
+  width?: number;                       // Card width
+  height?: number;                      // Card height
   createdAt: string; // ISO string
   updatedAt?: string; // ISO string
 }
@@ -69,6 +72,8 @@ declare global {
         updateNoteConnection: (id: string, updates: Partial<Omit<NoteConnection, 'id' | 'bookId' | 'fromAnnotationId' | 'toAnnotationId' | 'createdAt'>>) => Promise<{ success: boolean; error?: string }>;
         deleteNoteConnection: (id: string) => Promise<{ success: boolean; error?: string }>;
         batchUpdateNoteConnections: (bookId: string, connections: NoteConnection[]) => Promise<{ success: boolean; error?: string }>;
+        updateAnnotation: (id: string, updates: Partial<Omit<Annotation, 'id' | 'createdAt'>>) => Promise<{ success: boolean; error?: string }>;
+        batchUpdateAnnotationVisuals: (bookId: string, annotations: Array<{ id: string; position?: { x: number; y: number }; width?: number; height?: number }>) => Promise<{ success: boolean; error?: string }>;
       };
     };
   }

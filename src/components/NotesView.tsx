@@ -105,35 +105,40 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     }
   }, [bookId]);
 
+  // Save annotation visual properties to database
+  const saveAnnotationVisuals = useCallback(async (updatedCards: NoteCard[]) => {
+    try {
+      console.log('Saving annotation visuals for bookId:', bookId, 'cards:', updatedCards.length);
+      const electron = (window as any).electron;
+      if (electron && electron.db) {
+        const annotationsToUpdate = updatedCards.map(card => ({
+          id: card.annotation.id,
+          position: card.position,
+          width: card.width,
+          height: card.height
+        }));
+        
+        console.log('Saving to database:', annotationsToUpdate);
+        const result = await electron.db.batchUpdateAnnotationVisuals(bookId, annotationsToUpdate);
+        console.log('Save result:', result);
+      } else {
+        console.warn('Electron or electron.db not available for saving annotation visuals');
+      }
+    } catch (error) {
+      console.warn('Failed to save annotation visuals to database:', error);
+    }
+  }, [bookId]);
+
   // Initialize note cards from annotations
   useEffect(() => {
     const newCards: NoteCard[] = annotations.map((annotation, index) => ({
       id: `card-${annotation.id}`,
       annotation,
-      position: { x: 50 + index * 200, y: 50 + index * 150 },
-      width: 200,
-      height: 120,
+      position: annotation.position || { x: 50 + index * 200, y: 50 + index * 150 },
+      width: annotation.width || 200,
+      height: annotation.height || 120,
     }));
     setNoteCards(newCards);
-    
-    // Load saved positions from localStorage (keep positions in localStorage for now)
-    try {
-      const annotationIds = annotations.map(a => a.id).sort().join('-');
-      const storageKey = `notes-view-positions-${annotationIds || 'empty'}`;
-      const savedData = localStorage.getItem(storageKey);
-      
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        if (parsed.cards) {
-          setNoteCards(prev => prev.map(card => {
-            const saved = parsed.cards.find((c: any) => c.annotationId === card.annotation.id);
-            return saved ? { ...card, position: saved.position } : card;
-          }));
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load saved notes view positions:', error);
-    }
   }, [annotations]);
 
   // Load connections from database when annotations or bookId changes
@@ -256,10 +261,15 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       setHoveredCard(null);
     }
 
+    // Save position changes to database if a card was dragged
+    if (draggedCard) {
+      saveAnnotationVisuals(noteCards);
+    }
+
     setDraggedCard(null);
     setIsPanning(false);
     setIsConnecting(false);
-  }, [isConnecting, hoveredCard, draggedCard]);
+  }, [isConnecting, hoveredCard, draggedCard, saveAnnotationVisuals, noteCards]);
 
   useEffect(() => {
     if (draggedCard) {
@@ -368,25 +378,6 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       setConnectionDescription('');
     }
   };
-
-  // Save positions to localStorage when cards change
-  useEffect(() => {
-    if (annotations.length === 0) return;
-    
-    try {
-      const data = {
-        cards: noteCards.map(card => ({
-          annotationId: card.annotation.id,
-          position: card.position,
-        })),
-      };
-      const annotationIds = annotations.map(a => a.id).sort().join('-');
-      const storageKey = `notes-view-positions-${annotationIds}`;
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch (error) {
-      console.warn('Failed to save notes view positions:', error);
-    }
-  }, [noteCards, annotations]);
 
   // Clean up connections when annotations are removed
   useEffect(() => {

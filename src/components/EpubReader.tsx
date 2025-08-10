@@ -278,6 +278,9 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         cfiRange: pendingSelection.cfiRange,
         text: pendingSelection.text,
         note: noteDraft.trim(),
+        position: { x: 50, y: 50 }, // Default position
+        width: 200, // Default width
+        height: 120, // Default height
         createdAt: new Date().toISOString(),
       };
       next = [...annotations, newAnn];

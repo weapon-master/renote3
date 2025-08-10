@@ -18,7 +18,9 @@ import {
   createNoteConnection,
   updateNoteConnection,
   deleteNoteConnection,
-  batchUpdateNoteConnections
+  batchUpdateNoteConnections,
+  updateAnnotation,
+  batchUpdateAnnotationVisuals
 } from './main/db';
 
 
@@ -552,6 +554,34 @@ function registerDatabaseHandlers() {
       return { success: true };
     } catch (error) {
       console.error('批量更新笔记连接时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 更新单个注释
+  ipcMain.handle('update-annotation', async (event, id: string, updates: any) => {
+    try {
+      const success = updateAnnotation(id, updates);
+      if (success) {
+        console.log(`注释 ${id} 已更新`);
+        return { success: true };
+      } else {
+        return { success: false, error: '注释不存在' };
+      }
+    } catch (error) {
+      console.error('更新注释时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 批量更新注释的视觉属性
+  ipcMain.handle('batch-update-annotation-visuals', async (event, bookId: string, annotations: any[]) => {
+    try {
+      batchUpdateAnnotationVisuals(bookId, annotations);
+      console.log(`批量更新了 ${annotations.length} 个注释的视觉属性`);
+      return { success: true };
+    } catch (error) {
+      console.error('批量更新注释视觉属性时出错:', error);
       return { success: false, error: error.message };
     }
   });

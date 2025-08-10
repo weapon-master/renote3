@@ -5,7 +5,7 @@ export function getAnnotationsByBookId(bookId: string): Annotation[] {
   const database = getDatabase();
   
   const stmt = database.prepare(`
-    SELECT id, cfi_range, text, note, created_at, updated_at
+    SELECT id, cfi_range, text, note, position_x, position_y, width, height, created_at, updated_at
     FROM annotations
     WHERE book_id = ?
     ORDER BY created_at ASC
@@ -16,6 +16,9 @@ export function getAnnotationsByBookId(bookId: string): Annotation[] {
     cfiRange: ann.cfi_range,
     text: ann.text,
     note: ann.note,
+    position: ann.position_x !== null && ann.position_y !== null ? { x: ann.position_x, y: ann.position_y } : undefined,
+    width: ann.width !== null ? ann.width : undefined,
+    height: ann.height !== null ? ann.height : undefined,
     createdAt: ann.created_at,
     updatedAt: ann.updated_at
   }));
@@ -25,8 +28,8 @@ export function createAnnotation(bookId: string, annotation: Omit<Annotation, 'i
   const database = getDatabase();
   
   const insertStmt = database.prepare(`
-    INSERT INTO annotations (id, book_id, cfi_range, text, note)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO annotations (id, book_id, cfi_range, text, note, position_x, position_y, width, height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
   const annotationId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -36,7 +39,11 @@ export function createAnnotation(bookId: string, annotation: Omit<Annotation, 'i
     bookId,
     annotation.cfiRange,
     annotation.text,
-    annotation.note
+    annotation.note,
+    annotation.position?.x || 0,
+    annotation.position?.y || 0,
+    annotation.width || 200,
+    annotation.height || 120
   );
   
   return {
@@ -44,6 +51,9 @@ export function createAnnotation(bookId: string, annotation: Omit<Annotation, 'i
     cfiRange: annotation.cfiRange,
     text: annotation.text,
     note: annotation.note,
+    position: annotation.position,
+    width: annotation.width,
+    height: annotation.height,
     createdAt: annotation.createdAt,
     updatedAt: annotation.updatedAt
   };
@@ -66,6 +76,20 @@ export function updateAnnotation(id: string, updates: Partial<Omit<Annotation, '
   if (updates.note !== undefined) {
     fields.push('note = ?');
     values.push(updates.note);
+  }
+  if (updates.position !== undefined) {
+    fields.push('position_x = ?');
+    fields.push('position_y = ?');
+    values.push(updates.position.x);
+    values.push(updates.position.y);
+  }
+  if (updates.width !== undefined) {
+    fields.push('width = ?');
+    values.push(updates.width);
+  }
+  if (updates.height !== undefined) {
+    fields.push('height = ?');
+    values.push(updates.height);
   }
   
   if (fields.length === 0) {
@@ -106,8 +130,8 @@ export function updateBookAnnotations(bookId: string, annotations: Annotation[])
     
     // Insert new annotations
     const insertStmt = database.prepare(`
-      INSERT INTO annotations (id, book_id, cfi_range, text, note, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO annotations (id, book_id, cfi_range, text, note, position_x, position_y, width, height, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     for (const annotation of annotations) {
@@ -117,8 +141,38 @@ export function updateBookAnnotations(bookId: string, annotations: Annotation[])
         annotation.cfiRange,
         annotation.text,
         annotation.note,
+        annotation.position?.x || 0,
+        annotation.position?.y || 0,
+        annotation.width || 200,
+        annotation.height || 120,
         annotation.createdAt,
         annotation.updatedAt || annotation.createdAt
+      );
+    }
+  });
+  
+  transaction();
+}
+
+// Batch update visual properties for multiple annotations
+export function batchUpdateAnnotationVisuals(bookId: string, annotations: Array<{ id: string; position?: { x: number; y: number }; width?: number; height?: number }>): void {
+  const database = getDatabase();
+  
+  const transaction = database.transaction(() => {
+    const updateStmt = database.prepare(`
+      UPDATE annotations
+      SET position_x = ?, position_y = ?, width = ?, height = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND book_id = ?
+    `);
+    
+    for (const annotation of annotations) {
+      updateStmt.run(
+        annotation.position?.x || 0,
+        annotation.position?.y || 0,
+        annotation.width || 200,
+        annotation.height || 120,
+        annotation.id,
+        bookId
       );
     }
   });

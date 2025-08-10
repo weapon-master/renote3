@@ -40,6 +40,10 @@ export function initDatabase(): void {
         cfi_range TEXT NOT NULL,
         text TEXT NOT NULL,
         note TEXT NOT NULL,
+        position_x REAL DEFAULT 0,
+        position_y REAL DEFAULT 0,
+        width REAL DEFAULT 200,
+        height REAL DEFAULT 120,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
@@ -72,6 +76,23 @@ export function initDatabase(): void {
       CREATE INDEX IF NOT EXISTS idx_note_connections_annotations ON note_connections(from_annotation_id, to_annotation_id);
     `);
     console.log('Database indexes created/verified');
+    
+    // Migrate existing annotations table to include visual properties
+    try {
+      const hasPositionX = db.prepare("PRAGMA table_info(annotations)").all().some((col: any) => col.name === 'position_x');
+      if (!hasPositionX) {
+        console.log('Migrating annotations table to include visual properties...');
+        db.exec(`
+          ALTER TABLE annotations ADD COLUMN position_x REAL DEFAULT 0;
+          ALTER TABLE annotations ADD COLUMN position_y REAL DEFAULT 0;
+          ALTER TABLE annotations ADD COLUMN width REAL DEFAULT 200;
+          ALTER TABLE annotations ADD COLUMN height REAL DEFAULT 120;
+        `);
+        console.log('Annotations table migration completed');
+      }
+    } catch (error) {
+      console.warn('Annotations table migration failed (columns may already exist):', error);
+    }
     
     // Check if database file exists
     if (fs.existsSync(DB_PATH)) {

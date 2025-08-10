@@ -11,7 +11,7 @@ export function getAllBooks(): Book[] {
   `);
   
   const annotationsStmt = database.prepare(`
-    SELECT id, cfi_range, text, note, created_at, updated_at
+    SELECT id, cfi_range, text, note, position_x, position_y, width, height, created_at, updated_at
     FROM annotations
     WHERE book_id = ?
     ORDER BY created_at ASC
@@ -31,6 +31,9 @@ export function getAllBooks(): Book[] {
       cfiRange: ann.cfi_range,
       text: ann.text,
       note: ann.note,
+      position: ann.position_x !== null && ann.position_y !== null ? { x: ann.position_x, y: ann.position_y } : undefined,
+      width: ann.width !== null ? ann.width : undefined,
+      height: ann.height !== null ? ann.height : undefined,
       createdAt: ann.created_at,
       updatedAt: ann.updated_at
     }))
