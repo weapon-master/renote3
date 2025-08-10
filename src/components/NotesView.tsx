@@ -38,6 +38,9 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
 
   // Initialize note cards from annotations
   useEffect(() => {
@@ -85,6 +88,10 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     
     setDraggedCard(cardId);
     setDragOffset({ x: offsetX, y: offsetY });
+    setDragStartPosition({ x: e.clientX, y: e.clientY });
+    
+    // Start in regular drag mode, will switch to connecting if we detect overlap
+    setIsConnecting(false);
   }, [noteCards]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -95,11 +102,54 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       const newX = (e.clientX - canvasRect.left - dragOffset.x + canvasOffset.x) / zoom;
       const newY = (e.clientY - canvasRect.top - dragOffset.y + canvasOffset.y) / zoom;
 
+      // Always update the card position for smooth dragging
       setNoteCards(prev => prev.map(card => 
         card.id === draggedCard 
           ? { ...card, position: { x: newX, y: newY } }
           : card
       ));
+
+      // Check for overlapping cards to determine if we should switch to connecting mode
+      // Use the updated card data for overlap detection
+      const draggedCardData = { ...noteCards.find(c => c.id === draggedCard)!, position: { x: newX, y: newY } };
+      if (draggedCardData) {
+        const draggedRect = {
+          left: newX,
+          top: newY,
+          right: newX + draggedCardData.width,
+          bottom: newY + draggedCardData.height,
+        };
+
+        let foundOverlap = false;
+        noteCards.forEach(card => {
+          if (card.id !== draggedCard) {
+            const cardRect = {
+              left: card.position.x,
+              top: card.position.y,
+              right: card.position.x + card.width,
+              bottom: card.position.y + card.height,
+            };
+
+            // Check if rectangles overlap
+            if (draggedRect.left < cardRect.right && 
+                draggedRect.right > cardRect.left && 
+                draggedRect.top < cardRect.bottom && 
+                draggedRect.bottom > cardRect.top) {
+              setHoveredCard(card.id);
+              foundOverlap = true;
+              
+              // Switch to connecting mode if we detect overlap
+              if (!isConnecting) {
+                setIsConnecting(true);
+              }
+            }
+          }
+        });
+
+        if (!foundOverlap) {
+          setHoveredCard(null);
+        }
+      }
     } else if (isPanning) {
       const deltaX = e.clientX - panStart.x;
       const deltaY = e.clientY - panStart.y;
@@ -109,12 +159,31 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       }));
       setPanStart({ x: e.clientX, y: e.clientY });
     }
-  }, [draggedCard, dragOffset, canvasOffset, zoom, isPanning, panStart]);
+  }, [draggedCard, dragOffset, canvasOffset, zoom, isPanning, panStart, isConnecting, noteCards]);
 
   const handleMouseUp = useCallback(() => {
+    // Create connection if hovering over another card
+    if (isConnecting && hoveredCard && draggedCard) {
+      const newConnection: Connection = {
+        id: `conn-${Date.now()}`,
+        fromCardId: draggedCard,
+        toCardId: hoveredCard,
+        direction: 'none',
+      };
+      setConnections(prev => [...prev, newConnection]);
+      
+      // Brief visual feedback for successful connection
+      setTimeout(() => {
+        setHoveredCard(null);
+      }, 200);
+    } else {
+      setHoveredCard(null);
+    }
+
     setDraggedCard(null);
     setIsPanning(false);
-  }, []);
+    setIsConnecting(false);
+  }, [isConnecting, hoveredCard, draggedCard]);
 
   useEffect(() => {
     if (draggedCard) {
@@ -354,14 +423,15 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       </div>
       <div className="notes-instructions">
         <p>💡 <strong>Instructions:</strong></p>
-        <ul>
-          <li>Click cards to navigate to notes in the reader</li>
-          <li>Drag cards to reposition them</li>
-          <li>Right-click two cards to connect them</li>
-          <li>Right-click connections to change direction</li>
-          <li>Double-click connections to add descriptions</li>
-          <li>Ctrl+scroll to zoom, Ctrl+drag to pan</li>
-        </ul>
+                 <ul>
+           <li>Click cards to navigate to notes in the reader</li>
+           <li>Drag cards to reposition them</li>
+           <li>Drag a card over another card to connect them</li>
+           <li>Right-click two cards to connect them</li>
+           <li>Right-click connections to change direction</li>
+           <li>Double-click connections to add descriptions</li>
+           <li>Ctrl+scroll to zoom, Ctrl+drag to pan</li>
+         </ul>
       </div>
       
       <div 
@@ -381,22 +451,22 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
             {drawConnections()}
           </svg>
           
-          {noteCards.map(card => (
-            <div
-              key={card.id}
-              className={`note-card ${connectionStart === card.id ? 'connection-start' : ''}`}
-              style={{
-                left: card.position.x,
-                top: card.position.y,
-                width: card.width,
-                height: card.height,
-              }}
-              onMouseDown={(e) => {
-                handleMouseDown(e, card.id);
-                handleCardMouseDown(e, card.id);
-              }}
-              onClick={() => onCardClick(card.annotation)}
-            >
+                     {noteCards.map(card => (
+             <div
+               key={card.id}
+               className={`note-card ${connectionStart === card.id ? 'connection-start' : ''} ${hoveredCard === card.id ? 'connection-target' : ''} ${isConnecting && draggedCard === card.id ? 'connecting' : ''}`}
+               style={{
+                 left: card.position.x,
+                 top: card.position.y,
+                 width: card.width,
+                 height: card.height,
+               }}
+               onMouseDown={(e) => {
+                 handleMouseDown(e, card.id);
+                 handleCardMouseDown(e, card.id);
+               }}
+               onClick={() => onCardClick(card.annotation)}
+             >
             <div className="card-header">
               <span className="card-title">Note</span>
               <span className="card-date">
