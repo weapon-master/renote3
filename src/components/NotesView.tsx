@@ -243,6 +243,8 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   // Handle connection direction change
   const handleConnectionRightClick = (e: React.MouseEvent, connectionId: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    console.log('Right-clicked connection:', connectionId);
     setConnections(prev => prev.map(conn => {
       if (conn.id === connectionId) {
         const directions: Array<'none' | 'bidirectional' | 'unidirectional'> = ['none', 'bidirectional', 'unidirectional'];
@@ -256,6 +258,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
 
   // Handle connection description
   const handleConnectionDoubleClick = (connectionId: string) => {
+    console.log('Double-clicked connection:', connectionId);
     const connection = connections.find(c => c.id === connectionId);
     if (connection) {
       setSelectedConnection(connectionId);
@@ -319,12 +322,21 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       
       if (!fromCard || !toCard) return null;
 
-      const fromX = fromCard.position.x + fromCard.width / 2;
-      const fromY = fromCard.position.y + fromCard.height / 2;
-      const toX = toCard.position.x + toCard.width / 2;
-      const toY = toCard.position.y + toCard.height / 2;
+      // Calculate center points
+      const fromCenterX = fromCard.position.x + fromCard.width / 2;
+      const fromCenterY = fromCard.position.y + fromCard.height / 2;
+      const toCenterX = toCard.position.x + toCard.width / 2;
+      const toCenterY = toCard.position.y + toCard.height / 2;
 
-      const angle = Math.atan2(toY - fromY, toX - fromX);
+      // Calculate angle between centers
+      const angle = Math.atan2(toCenterY - fromCenterY, toCenterX - fromCenterX);
+      
+      // Calculate intersection points with card edges
+      const fromX = fromCenterX + Math.cos(angle) * (fromCard.width / 2);
+      const fromY = fromCenterY + Math.sin(angle) * (fromCard.height / 2);
+      const toX = toCenterX - Math.cos(angle) * (toCard.width / 2);
+      const toY = toCenterY - Math.sin(angle) * (toCard.height / 2);
+
       const arrowLength = 10;
       const arrowAngle = Math.PI / 6;
 
@@ -353,37 +365,42 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
         arrowPath = `M ${arrow1X} ${arrow1Y} L ${toX} ${toY} L ${arrow2X} ${arrow2Y}`;
       }
 
-      return (
-        <g key={connection.id}>
-          <path
-            d={path}
-            stroke="#666"
-            strokeWidth="2"
-            fill="none"
-            onDoubleClick={() => handleConnectionDoubleClick(connection.id)}
-            onContextMenu={(e) => handleConnectionRightClick(e, connection.id)}
-            style={{ cursor: 'pointer' }}
-          />
-          {arrowPath && (
-            <path
-              d={arrowPath}
-              stroke="#666"
-              strokeWidth="2"
-              fill="none"
-            />
-          )}
-          {connection.description && (
-            <text
-              x={(fromX + toX) / 2}
-              y={(fromY + toY) / 2 - 10}
-              textAnchor="middle"
-              fontSize="12"
-              fill="#333"
-              pointerEvents="none"
-            >
-              {connection.description}
-            </text>
-          )}
+             return (
+         <g key={connection.id}>
+           <path
+             d={path}
+             stroke="#666"
+             strokeWidth="2"
+             fill="none"
+             onDoubleClick={(e) => {
+               e.preventDefault();
+               e.stopPropagation();
+               handleConnectionDoubleClick(connection.id);
+             }}
+             onContextMenu={(e) => handleConnectionRightClick(e, connection.id)}
+             style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+           />
+           {arrowPath && (
+             <path
+               d={arrowPath}
+               stroke="#666"
+               strokeWidth="2"
+               fill="none"
+               style={{ pointerEvents: 'auto' }}
+             />
+           )}
+                     {connection.description && (
+             <text
+               x={(fromCenterX + toCenterX) / 2}
+               y={(fromCenterY + toCenterY) / 2 - 10}
+               textAnchor="middle"
+               fontSize="12"
+               fill="#333"
+               pointerEvents="none"
+             >
+               {connection.description}
+             </text>
+           )}
         </g>
       );
     });
@@ -420,10 +437,10 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
             Clear Connections
           </button>
         </div>
-      </div>
-      <div className="notes-instructions">
-        <p>💡 <strong>Instructions:</strong></p>
-                 <ul>
+             </div>
+       <div className="notes-instructions">
+         <p>💡 <strong>Instructions:</strong></p>
+         <ul>
            <li>Click cards to navigate to notes in the reader</li>
            <li>Drag cards to reposition them</li>
            <li>Drag a card over another card to connect them</li>
@@ -432,14 +449,14 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
            <li>Double-click connections to add descriptions</li>
            <li>Ctrl+scroll to zoom, Ctrl+drag to pan</li>
          </ul>
-      </div>
-      
-      <div 
-        className="notes-canvas" 
-        ref={canvasRef}
-        onMouseDown={handleCanvasMouseDown}
-        onWheel={handleWheel}
-      >
+       </div>
+       
+       <div 
+         className="notes-canvas" 
+         ref={canvasRef}
+         onMouseDown={handleCanvasMouseDown}
+         onWheel={handleWheel}
+       >
         <div 
           className="canvas-content"
           style={{
@@ -447,9 +464,9 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
             transformOrigin: '0 0',
           }}
         >
-          <svg className="connections-layer" width="100%" height="100%">
-            {drawConnections()}
-          </svg>
+                     <svg className="connections-layer" width="100%" height="100%" style={{ pointerEvents: 'none' }}>
+             {drawConnections()}
+           </svg>
           
                      {noteCards.map(card => (
              <div
