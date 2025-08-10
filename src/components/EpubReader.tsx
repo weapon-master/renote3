@@ -107,7 +107,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
           const toolbarHeight = 40;
           let left = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
           // Prefer above; if not enough room, place below selection
-          let topCandidate = iframeRect.top + rect.top - toolbarHeight - padding;
+          const topCandidate = iframeRect.top + rect.top - toolbarHeight - padding;
           let top = topCandidate;
           if (topCandidate < 8) {
             top = iframeRect.top + rect.bottom + padding;
