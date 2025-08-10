@@ -43,6 +43,8 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   const [isConnecting, setIsConnecting] = useState(false);
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const isUserAction = useRef(false);
 
   // Load connections from database
   const loadConnections = useCallback(async () => {
@@ -70,6 +72,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
       console.warn('Failed to load connections from database:', error);
     } finally {
       setIsLoadingConnections(false);
+      setHasInitialized(true);
     }
   }, [bookId]);
 
@@ -137,6 +140,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   useEffect(() => {
     console.log('loadConnections useEffect triggered with annotations:', annotations.length, 'bookId:', bookId);
     if (annotations.length > 0) {
+      setHasInitialized(false); // Reset initialization state
       loadConnections();
     }
   }, [annotations, bookId, loadConnections]);
@@ -237,6 +241,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
         direction: 'none',
       };
       console.log('Creating connection via drag:', newConnection);
+      isUserAction.current = true; // Mark as user action
       setConnections(prev => {
         const newConnections = [...prev, newConnection];
         console.log('Updated connections:', newConnections);
@@ -284,6 +289,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
           direction: 'none',
         };
         console.log('Creating connection via right-click:', newConnection);
+        isUserAction.current = true; // Mark as user action
         setConnections(prev => {
           const newConnections = [...prev, newConnection];
           console.log('Updated connections:', newConnections);
@@ -321,6 +327,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
     e.preventDefault();
     e.stopPropagation();
     console.log('Right-clicked connection:', connectionId);
+    isUserAction.current = true; // Mark as user action
     setConnections(prev => prev.map(conn => {
       if (conn.id === connectionId) {
         const directions: Array<'none' | 'bidirectional' | 'unidirectional-forward' | 'unidirectional-backward'> = [
@@ -350,6 +357,7 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
 
   const saveConnectionDescription = () => {
     if (selectedConnection) {
+      isUserAction.current = true; // Mark as user action
       setConnections(prev => prev.map(conn => 
         conn.id === selectedConnection 
           ? { ...conn, description: connectionDescription }
@@ -383,18 +391,28 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
   // Clean up connections when annotations are removed
   useEffect(() => {
     const validCardIds = new Set(noteCards.map(card => card.id));
-    setConnections(prev => prev.filter(conn => 
+    const filteredConnections = connections.filter(conn => 
       validCardIds.has(conn.fromCardId) && validCardIds.has(conn.toCardId)
-    ));
-  }, [noteCards]);
+    );
+    
+    // Only update if connections were actually filtered out
+    if (filteredConnections.length !== connections.length) {
+      isUserAction.current = true; // Mark as user action since connections were removed
+      setConnections(filteredConnections);
+    }
+  }, [noteCards, connections]);
 
   // Save connections to database when connections change
   useEffect(() => {
-    if (annotations.length === 0 || isLoadingConnections) return;
+    if (annotations.length === 0 || isLoadingConnections || !hasInitialized) return;
     
-    console.log('Saving connections to database:', connections);
-    saveConnections(connections);
-  }, [connections, annotations, saveConnections, isLoadingConnections]);
+    // Only save if this is a user action (not during initial load)
+    if (isUserAction.current) {
+      console.log('Saving connections to database (user action):', connections);
+      saveConnections(connections);
+      isUserAction.current = false; // Reset the flag
+    }
+  }, [connections, annotations, saveConnections, isLoadingConnections, hasInitialized]);
 
   // Draw connections
   const drawConnections = () => {
@@ -548,7 +566,10 @@ const NotesView: React.FC<NotesViewProps> = ({ annotations, onCardClick, isVisib
           </div>
           <button 
             className="clear-connections-btn"
-            onClick={() => setConnections([])}
+            onClick={() => {
+              isUserAction.current = true; // Mark as user action
+              setConnections([]);
+            }}
           >
             Clear Connections
           </button>

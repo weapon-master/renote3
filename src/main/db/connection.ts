@@ -162,30 +162,36 @@ export function batchUpdateNoteConnections(bookId: string, connections: NoteConn
   
   // Use transaction for atomicity
   const transaction = database.transaction(() => {
-    // Delete existing connections for this book
-    const deleteStmt = database.prepare('DELETE FROM note_connections WHERE book_id = ?');
-    const deleteResult = deleteStmt.run(bookId);
-    console.log('Deleted existing connections:', deleteResult.changes);
-    
-    // Insert new connections
-    const insertStmt = database.prepare(`
-      INSERT INTO note_connections (id, book_id, from_annotation_id, to_annotation_id, direction, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    for (const connection of connections) {
-      console.log('Inserting connection:', connection);
-      const insertResult = insertStmt.run(
-        connection.id,
-        bookId,
-        connection.fromAnnotationId,
-        connection.toAnnotationId,
-        connection.direction,
-        connection.description,
-        connection.createdAt,
-        connection.updatedAt || connection.createdAt
-      );
-      console.log('Insert result:', insertResult);
+    // Only delete and insert if we have connections to save
+    // This prevents deleting existing connections when the component is just loading
+    if (connections.length > 0) {
+      // Delete existing connections for this book
+      const deleteStmt = database.prepare('DELETE FROM note_connections WHERE book_id = ?');
+      const deleteResult = deleteStmt.run(bookId);
+      console.log('Deleted existing connections:', deleteResult.changes);
+      
+      // Insert new connections
+      const insertStmt = database.prepare(`
+        INSERT INTO note_connections (id, book_id, from_annotation_id, to_annotation_id, direction, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const connection of connections) {
+        console.log('Inserting connection:', connection);
+        const insertResult = insertStmt.run(
+          connection.id,
+          bookId,
+          connection.fromAnnotationId,
+          connection.toAnnotationId,
+          connection.direction,
+          connection.description,
+          connection.createdAt,
+          connection.updatedAt || connection.createdAt
+        );
+        console.log('Insert result:', insertResult);
+      }
+    } else {
+      console.log('No connections to save, skipping database update');
     }
   });
   
