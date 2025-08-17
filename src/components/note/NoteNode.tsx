@@ -17,7 +17,13 @@ const NoteNode: React.FC<{
   
     return (
       <div>
-        <div className="node-header">
+        <div 
+          className="node-header"
+          style={{ 
+            backgroundColor: annotation.color?.rgba || '#f8f9fa',
+            borderBottom: `2px solid ${annotation.color?.rgba || '#e9ecef'}`
+          }}
+        >
           <span className="node-title">Note</span>
           <span className="node-date">
             {new Date(annotation.createdAt).toLocaleDateString()}

@@ -1,91 +1,68 @@
-# 高亮颜色逐渐加深问题修复总结
+# 高亮功能修复总结
 
 ## 问题描述
-在反复点击note卡片时，reader中的高亮颜色会逐渐加深，直至完全遮挡文字，影响阅读体验。
 
-## 问题原因
-1. 每次点击note卡片时，`navigateToAnnotation`函数都会添加新的高亮
-2. 旧的高亮没有被正确清理，导致多个高亮层叠加
-3. 使用相同的高亮类型（'highlight'）导致epub.js无法区分临时高亮和永久高亮
+新添加的注释在Notes视图中显示为Note卡片，但对应的文本在阅读器中没有被正确高亮显示对应的颜色。
 
-## 解决方案
+## 修复内容
 
-### 1. 使用标准高亮类型
-- 继续使用标准的 `'highlight'` 类型，确保epub.js兼容性
-- 通过状态管理避免高亮叠加问题
+### 1. 改进高亮应用机制
 
-### 2. 添加状态管理
-- 添加 `currentTempHighlight` 状态来跟踪当前的临时高亮
-- 在添加新高亮之前，先清理旧的临时高亮
+- **文件**: `src/components/EpubReader.tsx`
+- **修改**: `applyHighlights` 函数
+  - 在添加新高亮前先移除所有现有高亮，避免重复
+  - 为每个高亮添加更好的样式（圆角、内边距、外边距）
+  - 添加调试日志来跟踪高亮应用过程
 
-### 3. 改进高亮策略
-- 临时高亮时先移除所有现有高亮
-- 添加黄色临时高亮（2秒后自动消失）
-- 临时高亮消失后自动恢复蓝色永久高亮
+### 2. 增强主题样式
 
-### 4. 完善清理机制
-- 在页面切换时自动清理临时高亮并恢复永久高亮
-- 在2秒后自动移除临时高亮并恢复永久高亮
-- 确保在组件卸载时清理所有临时高亮
+- **文件**: `src/components/EpubReader.tsx`
+- **修改**: `handleRendition` 函数中的主题设置
+  - 为高亮元素添加更好的样式属性
+  - 确保高亮元素有正确的z-index和pointer-events
 
-## 修改的文件
-- `src/components/EpubReader.tsx`
+### 3. 添加CSS样式支持
 
-## 主要修改内容
+- **文件**: `src/components/EpubReader.css`
+- **添加**: 专门的高亮样式
+  - `.epubjs-hl` 和 `.epub-highlight` 的样式规则
+  - 悬停效果和过渡动画
+  - 使用 `!important` 确保样式优先级
 
-### 1. 添加状态变量
-```typescript
-const [currentTempHighlight, setCurrentTempHighlight] = useState<string | null>(null);
-```
+### 4. 改进时机控制
 
-### 2. 修改navigateToAnnotation函数
-```typescript
-// 先移除所有现有高亮
-renditionRef.current.annotations.remove(annotation.cfiRange, 'highlight');
+- **文件**: `src/components/EpubReader.tsx`
+- **修改**: 多个地方添加延迟和重新应用机制
+  - 在注释变化时添加50ms延迟
+  - 在内容渲染时添加100ms延迟
+  - 在位置变化时添加200ms延迟重新应用高亮
 
-// 添加临时高亮
-renditionRef.current.annotations.add('highlight', annotation.cfiRange, {
-  'background-color': 'rgba(255, 193, 7, 0.4)',
-  'border': '2px solid rgba(255, 193, 7, 0.8)'
-});
+### 5. 添加调试功能
 
-// 2秒后恢复永久高亮
-setTimeout(() => {
-  renditionRef.current?.annotations.remove(annotation.cfiRange, 'highlight');
-  // 重新添加永久高亮
-  renditionRef.current?.annotations.add('highlight', annotation.cfiRange, {
-    'background-color': 'rgba(0, 123, 255, 0.3)',
-    'border': '1px solid rgba(0, 123, 255, 0.6)'
-  });
-}, 2000);
-```
+- **文件**: `src/components/EpubReader.tsx`
+- **添加**: 调试日志和DOM检查
+  - 在控制台输出高亮应用过程
+  - 检查DOM中实际存在的高亮元素
+  - 验证高亮元素的样式属性
 
-### 3. 页面切换时清理
-```typescript
-rendition.on('relocated', () => {
-  // 移除临时高亮并恢复永久高亮
-  if (currentTempHighlight && renditionRef.current) {
-    renditionRef.current.annotations.remove(currentTempHighlight, 'highlight');
-    setCurrentTempHighlight(null);
-    
-    // 重新应用所有永久高亮
-    setTimeout(() => {
-      if (renditionRef.current) {
-        applyHighlights(renditionRef.current, annotations);
-      }
-    }, 100);
-  }
-});
-```
+## 关键改进点
+
+1. **时机问题**: 确保在内容完全加载后再应用高亮
+2. **样式优先级**: 使用CSS `!important` 确保高亮样式不被覆盖
+3. **重复处理**: 避免重复添加高亮导致的问题
+4. **调试支持**: 添加详细的日志来帮助诊断问题
 
 ## 测试建议
-1. 打开一个包含多个批注的EPUB文件
-2. 反复点击不同的note卡片
-3. 验证高亮不会叠加，每次只显示一个临时高亮
-4. 确认2秒后临时高亮自动消失
-5. 验证页面切换时临时高亮被正确清理
 
-## 效果
-- 解决了高亮颜色逐渐加深的问题
-- 提供了清晰的视觉反馈，区分临时高亮和永久高亮
-- 改善了用户体验，避免了文字被遮挡的问题
+1. 打开应用程序并选择一本书
+2. 选择文本并添加不同颜色的批注
+3. 检查文本是否正确高亮显示
+4. 翻页后检查高亮是否仍然可见
+5. 查看浏览器控制台的调试信息
+
+## 预期结果
+
+- 新添加的注释应该立即在阅读器中显示为对应颜色的高亮
+- 高亮应该在整个阅读过程中保持可见
+- 点击高亮文本应该显示编辑工具栏
+- Notes视图中的卡片应该与阅读器中的高亮对应

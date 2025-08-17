@@ -203,6 +203,44 @@
   resize: vertical;
 }
 
+.note-color-selector {
+  margin-bottom: 12px;
+}
+
+.note-color-selector label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.note-color-selector .color-options {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.note-color-selector .color-options .color-option {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.note-color-selector .color-options .color-option:hover {
+  transform: scale(1.1);
+  border-color: #333;
+}
+
+.note-color-selector .color-options .color-option.selected {
+  border-color: #007bff;
+  border-width: 3px;
+  transform: scale(1.1);
+}
+
 .note-actions {
   display: flex;
   gap: 8px;
@@ -237,6 +275,56 @@
 
 .toolbar-btn:hover {
   background: #495057;
+}
+
+.color-picker-container {
+  position: relative;
+  display: inline-block;
+}
+
+.color-picker-btn {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+.color-picker-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.color-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1002;
+  margin-top: 4px;
+}
+
+.color-option {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-option:hover {
+  transform: scale(1.2);
+  border-color: #333;
 }
 
 .note-popup {
@@ -328,6 +416,25 @@
 .epub-error p:first-child {
   font-size: 18px;
   font-weight: 500;
+}
+
+/* 高亮样式 */
+.epubjs-hl,
+.epub-highlight,
+.epubjs-ul {
+  pointer-events: auto !important;
+  z-index: 1 !important;
+  border-radius: 2px !important;
+  padding: 1px 2px !important;
+  margin: 0 1px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.epubjs-hl:hover,
+.epub-highlight:hover,
+.epubjs-ul:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* 响应式设计 */
