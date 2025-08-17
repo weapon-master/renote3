@@ -19,7 +19,7 @@ export function getAnnotationsByBookId(bookId: string): Annotation[] {
     title: ann.title,
     note: ann.note,
     color: {
-      rgba: ann.color_rgba || 'rgba(255, 255, 0, 0.3)',
+      rgba: ann.color_rgba || 'rgba(255, 255, 0, 0.4)',
       category: ann.color_category || 'default'
     },
     createdAt: ann.created_at,

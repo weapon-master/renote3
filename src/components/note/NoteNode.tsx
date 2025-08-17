@@ -1,6 +1,7 @@
 import React from "react";
 import { Annotation } from "@/types";
 import { Handle, Position } from "@xyflow/react";
+import { AnnotationColor } from "@/const/annotation-color";
 
 
 
@@ -20,8 +21,8 @@ const NoteNode: React.FC<{
         <div 
           className="node-header"
           style={{ 
-            backgroundColor: annotation.color?.rgba || '#f8f9fa',
-            borderBottom: `2px solid ${annotation.color?.rgba || '#e9ecef'}`
+            backgroundColor: annotation.color?.rgba || AnnotationColor.HighlightYellow,
+            borderBottom: `2px solid ${annotation.color?.rgba || AnnotationColor.HighlightYellow}`
           }}
         >
           <span className="node-title">Note</span>

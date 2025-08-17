@@ -41,6 +41,9 @@ export default function NoteFlow({
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       console.log('onNodesChange', changes);
+    //   if (!changes.every(change => Boolean(change.position))) {
+    //     return;
+    //   }
       setNodes((nds) => {
         const newNodes = applyNodeChanges(changes, nds);
         // 立即触发保存回调

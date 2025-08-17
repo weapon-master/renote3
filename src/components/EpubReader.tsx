@@ -11,21 +11,48 @@ interface EpubReaderProps {
   onAnnotationsChange?: (annotations: Annotation[]) => void;
 }
 
-const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnnotationsChange }) => {
-  const [location, setLocation] = useState<string | number>(book.readingProgress || 0);
+const EpubReader: React.FC<EpubReaderProps> = ({
+  book,
+  onAnnotationClick,
+  onAnnotationsChange,
+}) => {
+  const [location, setLocation] = useState<string | number>(
+    book.readingProgress || 0,
+  );
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const renditionRef = useRef<any>(null);
-  const [pendingSelection, setPendingSelection] = useState<{ id?: string; cfiRange: string; text: string } | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<{
+    id?: string;
+    cfiRange: string;
+    text: string;
+  } | null>(null);
   const [noteDraft, setNoteDraft] = useState<string>('');
   const [showNoteModal, setShowNoteModal] = useState<boolean>(false);
-  const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);
+  const [toolbarPosition, setToolbarPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
-  const [notePopup, setNotePopup] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
-  const [hoverToolbar, setHoverToolbar] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
+  const [notePopup, setNotePopup] = useState<{
+    top: number;
+    left: number;
+    annotation: Annotation;
+  } | null>(null);
+  const [hoverToolbar, setHoverToolbar] = useState<{
+    top: number;
+    left: number;
+    annotation: Annotation;
+  } | null>(null);
   const hoverToolbarRef = useRef<HTMLDivElement | null>(null);
-  const [clickToolbar, setClickToolbar] = useState<{ top: number; left: number; annotation: Annotation } | null>(null);
+  const [clickToolbar, setClickToolbar] = useState<{
+    top: number;
+    left: number;
+    annotation: Annotation;
+  } | null>(null);
   const clickToolbarRef = useRef<HTMLDivElement | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string>(AnnotationColor.HighlightYellow);
+  const [selectedColor, setSelectedColor] = useState<string>(
+    AnnotationColor.HighlightYellow,
+  );
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
 
   const epubUrl = useMemo(() => {
@@ -40,9 +67,11 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     console.log('Location changed to:', epubcfi);
     // Save reading progress to database
     if (window.electron?.db?.updateReadingProgress) {
-      window.electron.db.updateReadingProgress(book.id, epubcfi).catch((error: any) => {
-        console.error('Failed to save reading progress:', error);
-      });
+      window.electron.db
+        .updateReadingProgress(book.id, epubcfi)
+        .catch((error: any) => {
+          console.error('Failed to save reading progress:', error);
+        });
     }
   };
 
@@ -81,10 +110,11 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     const loadAnnotations = async () => {
       try {
         if (window.electron?.db?.getAnnotationsByBookId) {
-          const loadedAnnotations = await window.electron.db.getAnnotationsByBookId(book.id);
+          const loadedAnnotations =
+            await window.electron.db.getAnnotationsByBookId(book.id);
           console.log('Loaded annotations from database:', loadedAnnotations);
           setAnnotations(loadedAnnotations);
-          
+
           // If rendition is already ready, apply highlights immediately
           // if (renditionRef.current) {
           //   console.log('Rendition already ready, applying highlights immediately');
@@ -97,7 +127,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         console.error('Failed to load annotations:', error);
       }
     };
-    
+
     loadAnnotations();
   }, [book.id]);
 
@@ -114,53 +144,53 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     renditionRef.current = rendition;
     // Ensure selection is visually highlighted inside the iframe
     try {
-             rendition.themes.default({
-         '::selection': { background: 'rgba(0, 123, 255, 0.35)' },
-         // ensure highlights can receive hover events and are visible
-         '.epubjs-hl': { 
-           pointerEvents: 'auto',
-           backgroundColor: 'rgba(0, 123, 255, 0.3)',
-           zIndex: '1',
-           borderRadius: '2px',
-           padding: '1px 2px',
-           margin: '0 1px'
-         },
-         '.epub-highlight': { 
-           pointerEvents: 'auto',
-           backgroundColor: 'rgba(0, 123, 255, 0.3)',
-           zIndex: '1',
-           borderRadius: '2px',
-           padding: '1px 2px',
-           margin: '0 1px'
-         },
-         '.epubjs-ul': { 
-           pointerEvents: 'auto',
-           backgroundColor: 'rgba(0, 123, 255, 0.3)',
-           zIndex: '1',
-           borderRadius: '2px',
-           padding: '1px 2px',
-           margin: '0 1px'
-         },
-         '.epubjs-hl[data-epubcfi]': {
-           backgroundColor: 'rgba(0, 123, 255, 0.3)',
-           zIndex: '1',
-           borderRadius: '2px',
-           padding: '1px 2px',
-           margin: '0 1px'
-         }
-       });
+      rendition.themes.default({
+        '::selection': { background: 'rgba(0, 123, 255, 0.35)' },
+        // ensure highlights can receive hover events and are visible
+        '.epubjs-hl': {
+          pointerEvents: 'auto',
+          zIndex: '1',
+          borderRadius: '2px',
+          padding: '1px 2px',
+          margin: '0 1px',
+        },
+        '.epub-highlight': {
+          pointerEvents: 'auto',
+          zIndex: '1',
+          borderRadius: '2px',
+          padding: '1px 2px',
+          margin: '0 1px',
+        },
+        '.epubjs-ul': {
+          pointerEvents: 'auto',
+          zIndex: '1',
+          borderRadius: '2px',
+          padding: '1px 2px',
+          margin: '0 1px',
+        },
+        '.epubjs-hl[data-epubcfi]': {
+          zIndex: '1',
+          borderRadius: '2px',
+          padding: '1px 2px',
+          margin: '0 1px',
+        },
+      });
       console.log('Theme applied successfully');
     } catch (error) {
       console.warn('Failed to apply selection theme:', error);
     }
     // Render existing highlights
-    console.log('Initial highlights application with', annotations.length, 'annotations');
+    console.log(
+      'Initial highlights application with',
+      annotations.length,
+      'annotations',
+    );
     if (annotations.length > 0) {
       setTimeout(() => {
         applyHighlights(rendition, annotations);
       }, 200);
     }
-    
+
     // Re-apply highlights when content is rendered
     rendition.on('rendered', (_section: any, contents: any) => {
       // Small delay to ensure content is fully rendered
@@ -168,13 +198,13 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         applyHighlights(rendition, annotations);
       }, 100);
     });
-    
+
     // Also re-apply highlights when location changes
-    rendition.on('relocated', () => {
-      setTimeout(() => {
-        applyHighlights(rendition, annotations);
-      }, 200);
-    });
+    // rendition.on('relocated', () => {
+    //   setTimeout(() => {
+    //     applyHighlights(rendition, annotations);
+    //   }, 200);
+    // });
     // Selection handler
     rendition.on('selected', (cfiRange: string, contents: any) => {
       const sel = contents.window.getSelection();
@@ -188,21 +218,30 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
       try {
         const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
         const rect = range ? range.getBoundingClientRect() : null;
-        const iframeEl: HTMLIFrameElement | null = contents.iframe || (contents?.document?.defaultView?.frameElement as HTMLIFrameElement) || null;
+        const iframeEl: HTMLIFrameElement | null =
+          contents.iframe ||
+          (contents?.document?.defaultView
+            ?.frameElement as HTMLIFrameElement) ||
+          null;
         if (rect && iframeEl) {
           const iframeRect = iframeEl.getBoundingClientRect();
           const padding = 8;
           const toolbarWidth = 220;
           const toolbarHeight = 40;
-          let left = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
+          let left =
+            iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
           // Prefer above; if not enough room, place below selection
-          const topCandidate = iframeRect.top + rect.top - toolbarHeight - padding;
+          const topCandidate =
+            iframeRect.top + rect.top - toolbarHeight - padding;
           let top = topCandidate;
           if (topCandidate < 8) {
             top = iframeRect.top + rect.bottom + padding;
           }
           // Clamp to viewport
-          left = Math.max(8, Math.min(window.innerWidth - toolbarWidth - 8, left));
+          left = Math.max(
+            8,
+            Math.min(window.innerWidth - toolbarWidth - 8, left),
+          );
           top = Math.max(8, top);
           setToolbarPosition({ top, left });
         } else {
@@ -227,25 +266,35 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
       rendition.on('rendered', (_section: any, contents: any) => {
         const doc: Document | undefined = contents?.document;
         if (!doc) return;
-        const handler = () => { setToolbarPosition(null); setNotePopup(null); setHoverToolbar(null); setClickToolbar(null); };
+        const handler = () => {
+          setToolbarPosition(null);
+          setNotePopup(null);
+          setHoverToolbar(null);
+          setClickToolbar(null);
+        };
         doc.addEventListener('mousedown', handler);
         // No hover toolbar; toolbar is shown on click now
         // Best-effort removal when content is destroyed
-        try { 
+        try {
           if (contents.on) {
-            contents.on('destroy', () => doc.removeEventListener('mousedown', handler));
+            contents.on('destroy', () =>
+              doc.removeEventListener('mousedown', handler),
+            );
           }
         } catch {
           // Ignore errors
         }
       });
-          } catch {
-        // Ignore errors
-      }
+    } catch {
+      // Ignore errors
+    }
   };
 
   useEffect(() => {
-    console.log('Annotations changed, applying highlights. Count:', annotations.length);
+    console.log(
+      'Annotations changed, applying highlights. Count:',
+      annotations.length,
+    );
     if (renditionRef.current) {
       // Small delay to ensure any pending renders are complete
       setTimeout(() => {
@@ -258,12 +307,12 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
 
   const applyHighlights = (rendition: any, anns: Annotation[]) => {
     console.log('Applying highlights for', anns.length, 'annotations');
-    
+
     if (!rendition || !rendition.annotations) {
       console.warn('Rendition or annotations not available');
       return;
     }
-    
+
     // First, remove all existing highlights to avoid duplicates
     try {
       rendition.annotations.remove('highlight');
@@ -271,80 +320,106 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     } catch (error) {
       console.warn('Failed to remove existing highlights:', error);
     }
-    
+
     // Add highlights for each annotation
     anns.forEach((a) => {
       try {
-        console.log('Adding highlight for annotation:', a.id, 'at CFI:', a.cfiRange, 'with color:', a.color?.rgba);
-        
+        console.log(
+          'Adding highlight for annotation:',
+          a.id,
+          'at CFI:',
+          a.cfiRange,
+          'with color:',
+          a.color?.rgba,
+        );
+
         // Validate CFI range
         if (!a.cfiRange || a.cfiRange.trim() === '') {
           console.warn('Invalid CFI range for annotation:', a.id);
           return;
         }
-        
+
         // Try multiple approaches to add highlight
         let success = false;
-        
-                 // Method 1: Standard approach with callback
-         try {
-           rendition.annotations.add(
-             'highlight',
-             a.cfiRange,
-             {
-               backgroundColor: a.color?.rgba || AnnotationColor.HighlightYellow,
-               borderRadius: '2px',
-               padding: '1px 2px',
-               margin: '0 1px'
-             },
-             (e: any) => handleHighlightClick(e, a)
-           );
-           console.log('Successfully added highlight (method 1) for annotation:', a.id);
-           success = true;
-         } catch (method1Error) {
-           console.warn('Method 1 failed:', method1Error);
-         }
-         
-         // Method 2: Without callback
-         if (!success) {
-           try {
-             rendition.annotations.add(
-               'highlight',
-               a.cfiRange,
-               {
-                 backgroundColor: a.color?.rgba || AnnotationColor.HighlightYellow,
-                 borderRadius: '2px',
-                 padding: '1px 2px',
-                 margin: '0 1px'
-               }
-             );
-             console.log('Successfully added highlight (method 2) for annotation:', a.id);
-             success = true;
-           } catch (method2Error) {
-             console.warn('Method 2 failed:', method2Error);
-           }
-         }
-         
-         // Method 3: Try with different annotation type
-         if (!success) {
-           try {
-             rendition.annotations.add(
-               'underline',
-               a.cfiRange,
-               {
-                 backgroundColor: a.color?.rgba || AnnotationColor.HighlightYellow,
-                 borderRadius: '2px',
-                 padding: '1px 2px',
-                 margin: '0 1px'
-               }
-             );
-             console.log('Successfully added highlight (method 3) for annotation:', a.id);
-             success = true;
-           } catch (method3Error) {
-             console.warn('Method 3 failed:', method3Error);
-           }
-         }
-        
+
+        // Method 1: Standard approach with callback
+        try {
+          rendition.annotations.add(
+            'highlight',
+            a.cfiRange,
+            {
+              backgroundColor: a.color?.rgba || AnnotationColor.HighlightYellow,
+              borderRadius: '2px',
+              padding: '1px 2px',
+              margin: '0 1px',
+            },
+            (e: any) => handleHighlightClick(e, a),
+            '',
+            { fill: a.color?.rgba || AnnotationColor.HighlightYellow },
+          );
+          console.log(
+            'Successfully added highlight (method 1) for annotation:',
+            a.id,
+          );
+          success = true;
+        } catch (method1Error) {
+          console.warn('Method 1 failed:', method1Error);
+        }
+
+        // Method 2: Without callback
+        if (!success) {
+          try {
+            rendition.annotations.add(
+              'highlight',
+              a.cfiRange,
+              {
+                backgroundColor:
+                  a.color?.rgba || AnnotationColor.HighlightYellow,
+                borderRadius: '2px',
+                padding: '1px 2px',
+                margin: '0 1px',
+              },
+              (e: any) => handleHighlightClick(e, a),
+              '',
+              { fill: a.color?.rgba || AnnotationColor.HighlightYellow },
+            );
+            console.log(
+              'Successfully added highlight (method 2) for annotation:',
+              a.id,
+            );
+            success = true;
+          } catch (method2Error) {
+            console.warn('Method 2 failed:', method2Error);
+          }
+        }
+
+        // Method 3: Try with different annotation type
+        if (!success) {
+          try {
+            rendition.annotations.add(
+              'underline',
+              a.cfiRange,
+              {
+                backgroundColor:
+                  a.color?.rgba || AnnotationColor.HighlightYellow,
+                borderRadius: '2px',
+                padding: '1px 2px',
+                margin: '0 1px',
+              },
+              (e: any) => handleHighlightClick(e, a),
+              '',
+              { fill: a.color?.rgba || AnnotationColor.HighlightYellow },
+            );
+            console.log(
+              'Successfully added highlight (method 3) for annotation:',
+              a.id,
+            );
+            success = true;
+          } catch (method3Error) {
+            console.warn('Method 3 failed:', method3Error);
+          }
+        }
+
         if (!success) {
           console.error('All methods failed for annotation:', a.id);
         }
@@ -352,18 +427,25 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         console.warn('Failed to add highlight for annotation:', a.id, error);
       }
     });
-    
+
     // Debug: Check if highlights are visible
     setTimeout(() => {
       try {
         const iframe = rendition.manager?.container?.querySelector('iframe');
         if (iframe && iframe.contentDocument) {
-          const highlights = iframe.contentDocument.querySelectorAll('.epubjs-hl, .epub-highlight, .epubjs-ul');
+          const highlights = iframe.contentDocument.querySelectorAll(
+            '.epubjs-hl, .epub-highlight, .epubjs-ul',
+          );
           console.log('Found', highlights.length, 'highlight elements in DOM');
           highlights.forEach((hl: Element, index: number) => {
             const textContent = hl.textContent?.substring(0, 50);
             const backgroundColor = (hl as HTMLElement).style.backgroundColor;
-            console.log(`Highlight ${index}:`, textContent, 'style:', backgroundColor);
+            console.log(
+              `Highlight ${index}:`,
+              textContent,
+              'style:',
+              backgroundColor,
+            );
           });
         } else {
           console.warn('No iframe or contentDocument found');
@@ -378,11 +460,20 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     try {
       // Find the actual highlight element to position above
       const rawTarget = (e?.target as Node) || null;
-      const elementTarget: HTMLElement | null = (rawTarget && (rawTarget.nodeType === 1 ? (rawTarget as HTMLElement) : (rawTarget.parentElement))) || null;
-      const ownerDoc: Document | null = elementTarget ? elementTarget.ownerDocument : null;
+      const elementTarget: HTMLElement | null =
+        (rawTarget &&
+          (rawTarget.nodeType === 1
+            ? (rawTarget as HTMLElement)
+            : rawTarget.parentElement)) ||
+        null;
+      const ownerDoc: Document | null = elementTarget
+        ? elementTarget.ownerDocument
+        : null;
       let highlightEl: HTMLElement | null = null;
       if (elementTarget && typeof elementTarget.closest === 'function') {
-        highlightEl = elementTarget.closest('.epubjs-hl, .epub-highlight') as HTMLElement | null;
+        highlightEl = elementTarget.closest(
+          '.epubjs-hl, .epub-highlight',
+        ) as HTMLElement | null;
       }
       if (!highlightEl && ownerDoc) {
         // Fallback: query by CFI on known attributes
@@ -394,22 +485,38 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         ];
         for (const sel of selectors) {
           const el = ownerDoc.querySelector(sel) as HTMLElement | null;
-          if (el) { highlightEl = el; break; }
+          if (el) {
+            highlightEl = el;
+            break;
+          }
         }
       }
-      const rect = highlightEl ? highlightEl.getBoundingClientRect() : (elementTarget ? elementTarget.getBoundingClientRect() : null);
-      const iframeEl: HTMLIFrameElement | null = ownerDoc ? (ownerDoc.defaultView?.frameElement as HTMLIFrameElement) : null;
+      const rect = highlightEl
+        ? highlightEl.getBoundingClientRect()
+        : elementTarget
+          ? elementTarget.getBoundingClientRect()
+          : null;
+      const iframeEl: HTMLIFrameElement | null = ownerDoc
+        ? (ownerDoc.defaultView?.frameElement as HTMLIFrameElement)
+        : null;
       const padding = 6;
       const toolbarWidth = 280;
       const toolbarHeight = 40;
       if (rect) {
         // Strategy A: rect is relative to iframe viewport → add iframe offsets
-        let leftA = 0; let topA = 0; let validA = false;
+        let leftA = 0;
+        let topA = 0;
+        let validA = false;
         if (iframeEl) {
           const iframeRect = iframeEl.getBoundingClientRect();
-          leftA = iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
-          const topCandidateA = iframeRect.top + rect.top - toolbarHeight - padding;
-          topA = topCandidateA < 8 ? iframeRect.top + rect.bottom + padding : topCandidateA;
+          leftA =
+            iframeRect.left + rect.left + rect.width / 2 - toolbarWidth / 2;
+          const topCandidateA =
+            iframeRect.top + rect.top - toolbarHeight - padding;
+          topA =
+            topCandidateA < 8
+              ? iframeRect.top + rect.bottom + padding
+              : topCandidateA;
           validA = true;
         }
         // Strategy B: rect is already in global viewport → use directly
@@ -417,7 +524,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         const topCandidateB = rect.top - toolbarHeight - padding;
         let topB = topCandidateB < 8 ? rect.bottom + padding : topCandidateB;
         // Clamp both
-        const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+        const clamp = (v: number, min: number, max: number) =>
+          Math.max(min, Math.min(max, v));
         if (validA) {
           leftA = clamp(leftA, 8, window.innerWidth - toolbarWidth - 8);
           topA = clamp(topA, 8, window.innerHeight - toolbarHeight - 8);
@@ -425,9 +533,20 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         leftB = clamp(leftB, 8, window.innerWidth - toolbarWidth - 8);
         topB = clamp(topB, 8, window.innerHeight - toolbarHeight - 8);
         // Choose the candidate that requires less clamping (more natural)
-        const score = (l: number, t: number, baseL: number, baseT: number) => Math.abs(l - baseL) + Math.abs(t - baseT);
-        const baseLA = validA ? (iframeEl!.getBoundingClientRect().left + rect.left + rect.width / 2 - toolbarWidth / 2) : Infinity;
-        const baseTA = validA ? (iframeEl!.getBoundingClientRect().top + rect.top - toolbarHeight - padding) : Infinity;
+        const score = (l: number, t: number, baseL: number, baseT: number) =>
+          Math.abs(l - baseL) + Math.abs(t - baseT);
+        const baseLA = validA
+          ? iframeEl!.getBoundingClientRect().left +
+            rect.left +
+            rect.width / 2 -
+            toolbarWidth / 2
+          : Infinity;
+        const baseTA = validA
+          ? iframeEl!.getBoundingClientRect().top +
+            rect.top -
+            toolbarHeight -
+            padding
+          : Infinity;
         const baseLB = rect.left + rect.width / 2 - toolbarWidth / 2;
         const baseTB = rect.top - toolbarHeight - padding;
         let useA = validA;
@@ -440,10 +559,18 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         const finalTop = validA && useA ? topA : topB;
         setClickToolbar({ top: finalTop, left: finalLeft, annotation });
       } else {
-        setClickToolbar({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
+        setClickToolbar({
+          top: 20,
+          left: (window.innerWidth - 280) / 2,
+          annotation,
+        });
       }
     } catch {
-      setClickToolbar({ top: 20, left: (window.innerWidth - 280) / 2, annotation });
+      setClickToolbar({
+        top: 20,
+        left: (window.innerWidth - 280) / 2,
+        annotation,
+      });
     }
   };
 
@@ -454,15 +581,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     }
     let next: Annotation[];
     if (pendingSelection.id) {
-      next = annotations.map(a => a.id === pendingSelection.id ? { 
-        ...a, 
-        note: noteDraft.trim(), 
-        color: {
-          rgba: selectedColor,
-          category: 'default'
-        },
-        updatedAt: Date.now() 
-      } : a);
+      next = annotations.map((a) =>
+        a.id === pendingSelection.id
+          ? {
+              ...a,
+              note: noteDraft.trim(),
+              color: {
+                rgba: selectedColor,
+                category: 'default',
+              },
+              updatedAt: Date.now(),
+            }
+          : a,
+      );
     } else {
       const newAnn: Annotation = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -473,7 +604,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         note: noteDraft.trim(),
         color: {
           rgba: selectedColor,
-          category: 'default'
+          category: 'default',
         },
         createdAt: Date.now(),
       };
@@ -488,12 +619,12 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     try {
       if (pendingSelection.id) {
         // Update existing annotation
-        await window.electron?.db?.updateAnnotation?.(pendingSelection.id, { 
+        await window.electron?.db?.updateAnnotation?.(pendingSelection.id, {
           note: noteDraft.trim(),
           color: {
             rgba: selectedColor,
-            category: 'default'
-          }
+            category: 'default',
+          },
         });
       } else {
         // Create new annotation
@@ -507,40 +638,12 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
   };
 
   const removeAnnotation = async (id: string) => {
-    const next = annotations.filter(a => a.id !== id);
+    const next = annotations.filter((a) => a.id !== id);
     setAnnotations(next);
     try {
       await window.electron?.db?.deleteAnnotation?.(id);
     } catch (e) {
       console.error('删除批注失败', e);
-    }
-  };
-
-  // Test function to add a temporary highlight
-  const testHighlight = () => {
-    if (renditionRef.current) {
-      console.log('Testing highlight functionality...');
-      try {
-        // Try to add a highlight to the current location
-        const currentCfi = renditionRef.current.location?.start?.cfi;
-        console.log('Current CFI:', currentCfi);
-        
-                 if (currentCfi) {
-           renditionRef.current.annotations.add('highlight', currentCfi, {
-             backgroundColor: 'rgba(255, 0, 0, 0.5)',
-             borderRadius: '2px',
-             padding: '1px 2px',
-             margin: '0 1px'
-           });
-           console.log('Test highlight added successfully at:', currentCfi);
-         } else {
-           console.warn('No current CFI available');
-         }
-      } catch (error) {
-        console.error('Failed to add test highlight:', error);
-      }
-    } else {
-      console.warn('Rendition not ready');
     }
   };
 
@@ -555,7 +658,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
       }
     };
     document.addEventListener('mousedown', onDocMouseDown, true);
-    return () => document.removeEventListener('mousedown', onDocMouseDown, true);
+    return () =>
+      document.removeEventListener('mousedown', onDocMouseDown, true);
   }, [toolbarPosition]);
 
   // Dismiss note popup on outside click
@@ -563,7 +667,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     if (!notePopup) return;
     const onDocMouseDown = () => setNotePopup(null);
     document.addEventListener('mousedown', onDocMouseDown, true);
-    return () => document.removeEventListener('mousedown', onDocMouseDown, true);
+    return () =>
+      document.removeEventListener('mousedown', onDocMouseDown, true);
   }, [notePopup]);
 
   // Dismiss click toolbar on outside click
@@ -576,7 +681,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
       }
     };
     document.addEventListener('mousedown', onDocMouseDown, true);
-    return () => document.removeEventListener('mousedown', onDocMouseDown, true);
+    return () =>
+      document.removeEventListener('mousedown', onDocMouseDown, true);
   }, [clickToolbar]);
 
   if (!epubUrl) {
@@ -590,15 +696,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
 
   return (
     <div className="epub-reader">
-      {/* Debug toolbar */}
-      <div style={{ position: 'fixed', top: 10, right: 10, zIndex: 1000, background: 'rgba(0,0,0,0.8)', padding: '10px', borderRadius: '5px' }}>
-        <button onClick={testHighlight} style={{ background: 'red', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}>
-          测试高亮
-        </button>
-        <div style={{ color: 'white', fontSize: '12px', marginTop: '5px' }}>
-          注释数量: {annotations.length}
-        </div>
-      </div>
       <ReactReader
         url={epubUrl}
         location={location}
@@ -607,93 +704,142 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
         showToc
         getRendition={handleRendition}
       />
-      {toolbarPosition && pendingSelection && createPortal(
-        <div
-          className="selection-toolbar"
-          ref={toolbarRef}
-          style={{ position: 'fixed', top: toolbarPosition.top, left: toolbarPosition.left, width: 280 }}
-        >
-          <div className="color-picker-container">
-            <button 
-              className="color-picker-btn"
-              style={{ backgroundColor: selectedColor }}
-              onClick={() => setShowColorPicker(!showColorPicker)}
-            />
-            {showColorPicker && (
-              <div className="color-picker-dropdown">
-                {Object.entries(AnnotationColor).map(([name, color]) => (
-                  <button
-                    key={name}
-                    className="color-option"
-                    style={{ backgroundColor: color }}
-                    onClick={() => {
-                      setSelectedColor(color);
-                      setShowColorPicker(false);
-                    }}
-                    title={name}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <button 
-            className="toolbar-btn"
-            onClick={() => { setShowNoteModal(true); }}
-          >添加批注</button>
-          <button 
-            className="toolbar-btn secondary"
-            onClick={() => { /* explain no-op for now */ }}
-          >解释</button>
-        </div>,
-        document.body
-      )}
-      {clickToolbar && createPortal(
-        <div
-          className="selection-toolbar"
-          ref={clickToolbarRef}
-          style={{ position: 'fixed', top: clickToolbar.top, left: clickToolbar.left, width: 280 }}
-        >
-          <button
-            className="toolbar-btn"
-            onClick={() => {
-              setPendingSelection({ id: clickToolbar.annotation.id, cfiRange: clickToolbar.annotation.cfiRange, text: clickToolbar.annotation.text });
-              setNoteDraft(clickToolbar.annotation.note);
-              setSelectedColor(clickToolbar.annotation.color?.rgba || AnnotationColor.HighlightYellow);
-              setShowNoteModal(true);
-              setClickToolbar(null);
+      {toolbarPosition &&
+        pendingSelection &&
+        createPortal(
+          <div
+            className="selection-toolbar"
+            ref={toolbarRef}
+            style={{
+              position: 'fixed',
+              top: toolbarPosition.top,
+              left: toolbarPosition.left,
+              width: 280,
             }}
-          >编辑</button>
-          <button
-            className="toolbar-btn"
-            onClick={() => {
-              setNotePopup({ top: clickToolbar.top, left: clickToolbar.left, annotation: clickToolbar.annotation });
-              setClickToolbar(null);
+          >
+            <div className="color-picker-container">
+              <button
+                className="color-picker-btn"
+                style={{ backgroundColor: selectedColor }}
+                onClick={() => setShowColorPicker(!showColorPicker)}
+              />
+              {showColorPicker && (
+                <div className="color-picker-dropdown">
+                  {Object.entries(AnnotationColor).map(([name, color]) => (
+                    <button
+                      key={name}
+                      className="color-option"
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        setSelectedColor(color);
+                        setShowColorPicker(false);
+                      }}
+                      title={name}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              className="toolbar-btn"
+              onClick={() => {
+                setShowNoteModal(true);
+              }}
+            >
+              添加批注
+            </button>
+            <button
+              className="toolbar-btn secondary"
+              onClick={() => {
+                /* explain no-op for now */
+              }}
+            >
+              解释
+            </button>
+          </div>,
+          document.body,
+        )}
+      {clickToolbar &&
+        createPortal(
+          <div
+            className="selection-toolbar"
+            ref={clickToolbarRef}
+            style={{
+              position: 'fixed',
+              top: clickToolbar.top,
+              left: clickToolbar.left,
+              width: 280,
             }}
-          >查看</button>
-          <button
-            className="toolbar-btn secondary"
-            onClick={() => {
-              removeAnnotation(clickToolbar.annotation.id);
-              setClickToolbar(null);
+          >
+            <button
+              className="toolbar-btn"
+              onClick={() => {
+                setPendingSelection({
+                  id: clickToolbar.annotation.id,
+                  cfiRange: clickToolbar.annotation.cfiRange,
+                  text: clickToolbar.annotation.text,
+                });
+                setNoteDraft(clickToolbar.annotation.note);
+                setSelectedColor(
+                  clickToolbar.annotation.color?.rgba ||
+                    AnnotationColor.HighlightYellow,
+                );
+                setShowNoteModal(true);
+                setClickToolbar(null);
+              }}
+            >
+              编辑
+            </button>
+            <button
+              className="toolbar-btn"
+              onClick={() => {
+                setNotePopup({
+                  top: clickToolbar.top,
+                  left: clickToolbar.left,
+                  annotation: clickToolbar.annotation,
+                });
+                setClickToolbar(null);
+              }}
+            >
+              查看
+            </button>
+            <button
+              className="toolbar-btn secondary"
+              onClick={() => {
+                removeAnnotation(clickToolbar.annotation.id);
+                setClickToolbar(null);
+              }}
+            >
+              删除
+            </button>
+          </div>,
+          document.body,
+        )}
+      {notePopup &&
+        createPortal(
+          <div
+            className="note-popup"
+            style={{
+              position: 'fixed',
+              top: notePopup.top,
+              left: notePopup.left,
+              width: 280,
             }}
-          >删除</button>
-        </div>,
-        document.body
-      )}
-      {notePopup && createPortal(
-        <div
-          className="note-popup"
-          style={{ position: 'fixed', top: notePopup.top, left: notePopup.left, width: 280 }}
-        >
-          <div className="note-popup-header">
-            <span>批注</span>
-            <button className="note-popup-close" onClick={() => setNotePopup(null)}>✕</button>
-          </div>
-          <div className="note-popup-text">{notePopup.annotation.text}</div>
-          <div className="note-popup-note">{notePopup.annotation.note}</div>
-        </div>,
-        document.body
-      )}
+          >
+            <div className="note-popup-header">
+              <span>批注</span>
+              <button
+                className="note-popup-close"
+                onClick={() => setNotePopup(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="note-popup-text">{notePopup.annotation.text}</div>
+            <div className="note-popup-note">{notePopup.annotation.note}</div>
+          </div>,
+          document.body,
+        )}
       {/* Simple note modal */}
       {showNoteModal && (
         <div className="note-modal-backdrop">
@@ -720,8 +866,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
               onChange={(e) => setNoteDraft(e.target.value)}
             />
             <div className="note-actions">
-              <button className="nav-btn" onClick={saveAnnotation}>保存</button>
-              <button className="nav-btn" onClick={() => { setShowNoteModal(false); setPendingSelection(null); setToolbarPosition(null); }}>取消</button>
+              <button className="nav-btn" onClick={saveAnnotation}>
+                保存
+              </button>
+              <button
+                className="nav-btn"
+                onClick={() => {
+                  setShowNoteModal(false);
+                  setPendingSelection(null);
+                  setToolbarPosition(null);
+                }}
+              >
+                取消
+              </button>
             </div>
           </div>
         </div>
