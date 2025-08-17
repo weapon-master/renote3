@@ -32,14 +32,17 @@ const saveConnections = debounce(async (newEdges: Edge[], bookId: string) => {
 }, 1000);
 
 const saveAnnotations = debounce(async (newNodes: Node<{ annotation: Annotation }>[], bookId: string) => {
+  console.log('saveAnnotations called with:', { newNodes, bookId });
   try {
     const electron = (window as any).electron;
     if (electron && electron.db) {
       // 获取所有注释ID
       const annotationIds = newNodes.map(node => node.id.replace('card-', ''));
+      console.log('Annotation IDs to update:', annotationIds);
       
       // 获取现有的卡片
       const existingCards = await electron.db.getCardsByAnnotationIds(annotationIds);
+      console.log('Existing cards from database:', existingCards);
       const existingCardsMap = new Map(existingCards.map((card: any) => [card.annotationId, card]));
       
       // 准备要更新的卡片数据
@@ -47,22 +50,26 @@ const saveAnnotations = debounce(async (newNodes: Node<{ annotation: Annotation 
         const annotationId = node.id.replace('card-', '');
         const existingCard = existingCardsMap.get(annotationId);
         
-        return {
+        const cardData = {
           id: (existingCard as any)?.id || `${Date.now()}_${Math.random().toString(36).slice(2)}`,
           annotationId,
           position: node.position,
           width: node.style.width as number,
           height: node.style.height as number,
         };
+        console.log('Card data to update:', cardData);
+        return cardData;
       });
       
+      console.log('Saving cards to database:', cardsToUpdate);
       // 批量更新卡片
-      await electron.db.batchUpdateCards(cardsToUpdate);
+      const result = await electron.db.batchUpdateCards(cardsToUpdate);
+      console.log('Database update result:', result);
     } else {
       console.warn('electron.db is not defined');
     }
   } catch (error) {
-    console.warn('Failed to save annotations to database:', error);
+    console.error('Failed to save annotations to database:', error);
   }
 }, 1000);
 
@@ -117,23 +124,80 @@ const NotesView: React.FC<NotesViewProps> = ({
   // Save connections to database
 
 
-  // Initialize nodes from annotations
-  useEffect(() => {
-    const newNodes: Node[] = annotations.map((annotation, index) => ({
-      id: `card-${annotation.id}`,
-      type: 'noteNode',
-      position: { x: 50 + index * 200, y: 50 + index * 150 },
-      data: {
-        annotation,
-        onCardClick,
-      },
-      style: {
-        width: 200,
-        height: 120,
-      },
-    }));
-    setInitialNodes(newNodes);
+  // Load cards from database and initialize nodes
+  const loadCardsAndInitializeNodes = useCallback(async () => {
+    try {
+      const electron = (window as any).electron;
+      if (electron && electron.db && annotations.length > 0) {
+        // 获取所有注释ID
+        const annotationIds = annotations.map(ann => ann.id);
+        
+        // 从数据库加载卡片数据
+        const existingCards = await electron.db.getCardsByAnnotationIds(annotationIds);
+        const cardsMap = new Map(existingCards.map((card: any) => [card.annotationId, card]));
+        
+        // 创建节点，使用保存的位置或默认位置
+        const newNodes: Node[] = annotations.map((annotation, index) => {
+          const savedCard = cardsMap.get(annotation.id) as any;
+          const defaultPosition = { x: 50 + index * 200, y: 50 + index * 150 };
+          
+          return {
+            id: `card-${annotation.id}`,
+            type: 'noteNode',
+            position: savedCard?.position || defaultPosition,
+            data: {
+              annotation,
+              onCardClick,
+            },
+            style: {
+              width: savedCard?.width || 200,
+              height: savedCard?.height || 120,
+            },
+          };
+        });
+        
+        setInitialNodes(newNodes);
+      } else {
+        // 如果没有数据库或注释为空，使用默认位置
+        const newNodes: Node[] = annotations.map((annotation, index) => ({
+          id: `card-${annotation.id}`,
+          type: 'noteNode',
+          position: { x: 50 + index * 200, y: 50 + index * 150 },
+          data: {
+            annotation,
+            onCardClick,
+          },
+          style: {
+            width: 200,
+            height: 120,
+          },
+        }));
+        setInitialNodes(newNodes);
+      }
+    } catch (error) {
+      console.warn('Failed to load cards from database:', error);
+      // 出错时使用默认位置
+      const newNodes: Node[] = annotations.map((annotation, index) => ({
+        id: `card-${annotation.id}`,
+        type: 'noteNode',
+        position: { x: 50 + index * 200, y: 50 + index * 150 },
+        data: {
+          annotation,
+          onCardClick,
+        },
+        style: {
+          width: 200,
+          height: 120,
+        },
+      }));
+      setInitialNodes(newNodes);
+    }
   }, [annotations, onCardClick]);
+
+  // Initialize nodes when annotations change
+  useEffect(() => {
+    loadCardsAndInitializeNodes();
+  }, [loadCardsAndInitializeNodes]);
   
   // 当注释列表更新时，确保连接仍然有效
   useEffect(() => {
@@ -162,7 +226,7 @@ const NotesView: React.FC<NotesViewProps> = ({
   const onNodesUpdate = useCallback((nodes: Node<{ annotation: Annotation }>[]) => {
     console.log('onNodesUpdate', nodes);
     saveAnnotations(nodes, bookId);
-  }, []);
+  }, [bookId]);
   const onEdgesUpdate = useCallback((edges: Edge[]) => {
     console.log('onEdgesUpdate', edges);
     saveConnections(edges, bookId);

@@ -41,21 +41,36 @@ export default function NoteFlow({
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       console.log('onNodesChange', changes);
-      setNodes((nds) => applyNodeChanges(changes, nds));
+      setNodes((nds) => {
+        const newNodes = applyNodeChanges(changes, nds);
+        // 立即触发保存回调
+        onNodesUpdate?.(newNodes);
+        return newNodes;
+      });
     },
-    [setNodes],
+    [setNodes, onNodesUpdate],
   );
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       console.log('onEdgesChange', changes);
-      setEdges((eds) => applyEdgeChanges(changes, eds));
+      setEdges((eds) => {
+        const newEdges = applyEdgeChanges(changes, eds);
+        // 立即触发保存回调
+        onEdgesUpdate?.(newEdges);
+        return newEdges;
+      });
     },
-    [setEdges],
+    [setEdges, onEdgesUpdate],
   );
   const onConnect: OnConnect = useCallback(
     (connection) =>
-      setEdges((currentEdges) => addEdge(connection, currentEdges)),
-    [setEdges],
+      setEdges((currentEdges) => {
+        const newEdges = addEdge(connection, currentEdges);
+        // 立即触发保存回调
+        onEdgesUpdate?.(newEdges);
+        return newEdges;
+      }),
+    [setEdges, onEdgesUpdate],
   );
   
   // 监听initialNodes和initialEdges的变化，更新内部状态
@@ -67,10 +82,7 @@ export default function NoteFlow({
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
   
-  useEffect(() => {
-    onNodesUpdate?.(nodes);
-    onEdgesUpdate?.(edges);
-  }, [nodes, edges, onNodesUpdate, onEdgesUpdate]);
+
   return (
     <div className="notes-canvas">
       <ReactFlowProvider>

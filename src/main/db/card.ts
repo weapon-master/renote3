@@ -79,21 +79,44 @@ export function batchUpdateCards(cards: Card[]): boolean {
     const database = getDatabase();
     
     const transaction = database.transaction(() => {
-        const stmt = database.prepare(`
+        const updateStmt = database.prepare(`
             UPDATE cards
             SET position_x = ?, position_y = ?, width = ?, height = ?, updated_at = ?
-            WHERE id = ?
+            WHERE annotation_id = ?
+        `);
+        
+        const insertStmt = database.prepare(`
+            INSERT INTO cards (id, annotation_id, position_x, position_y, width, height, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         for (const card of cards) {
-            stmt.run(
-                card.position?.x || 0,
-                card.position?.y || 0,
-                card.width || 200,
-                card.height || 120,
-                Date.now(),
-                card.id
-            );
+            // 检查卡片是否存在（通过annotation_id查询）
+            const existingCard = database.prepare('SELECT id FROM cards WHERE annotation_id = ?').get(card.annotationId);
+            
+            if (existingCard) {
+                // 更新现有卡片
+                updateStmt.run(
+                    card.position?.x || 0,
+                    card.position?.y || 0,
+                    card.width || 200,
+                    card.height || 120,
+                    Date.now(),
+                    card.annotationId
+                );
+            } else {
+                // 插入新卡片
+                insertStmt.run(
+                    card.id,
+                    card.annotationId,
+                    card.position?.x || 0,
+                    card.position?.y || 0,
+                    card.width || 200,
+                    card.height || 120,
+                    Date.now(),
+                    Date.now()
+                );
+            }
         }
     });
     
