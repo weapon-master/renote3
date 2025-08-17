@@ -12,16 +12,22 @@ import {
   createBook, 
   updateBook, 
   deleteBook, 
-  updateBookAnnotations,
   updateReadingProgress,
-
+  getAnnotationsByBookId,
+  createAnnotation,
+  updateAnnotation,
+  deleteAnnotation,
   getNoteConnectionsByBookId,
   createNoteConnection,
   updateNoteConnection,
   deleteNoteConnection,
   batchUpdateNoteConnections,
-  updateAnnotation,
-  batchUpdateAnnotationVisuals
+  getCardsByAnnotationIds,
+  createCard,
+  updateCard,
+  batchUpdateCards,
+  deleteCardsByAnnotationId,
+  deleteCards
 } from './main/db';
 
 
@@ -426,71 +432,91 @@ ipcMain.on('import-books', async (event, args) => {
   }
 });
 
-// 加载保存的书籍数据
-ipcMain.handle('load-books', async () => {
-  try {
-    const books = getAllBooks();
-    console.log(`从数据库加载了 ${books.length} 本书籍`);
-    return books;
-  } catch (error) {
-    console.error('从数据库加载书籍时出错:', error);
-    return [];
-  }
-});
 
-// 保存书籍数据 (已弃用，现在使用数据库)
-ipcMain.handle('save-books', async () => {
-  try {
-    console.log('save-books API 已弃用，现在使用数据库存储');
-    return { success: true };
-  } catch (error) {
-    console.error('保存书籍数据时出错:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// 删除书籍
-ipcMain.handle('delete-book', async (event, bookId: string) => {
-  try {
-    const success = deleteBook(bookId);
-    if (success) {
-      console.log(`书籍 ${bookId} 已从数据库删除`);
-      return { success: true };
-    } else {
-      return { success: false, error: '书籍不存在' };
-    }
-  } catch (error) {
-    console.error('删除书籍时出错:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// 更新书籍信息
-ipcMain.handle('update-book', async (event, bookId: string, updates: any) => {
-  try {
-    // 如果更新包含annotations，使用专门的函数
-    if (updates.annotations !== undefined) {
-      updateBookAnnotations(bookId, updates.annotations);
-      // 移除annotations，只更新其他字段
-      const { annotations, ...otherUpdates } = updates;
-      if (Object.keys(otherUpdates).length > 0) {
-        updateBook(bookId, otherUpdates);
-      }
-    } else {
-      updateBook(bookId, updates);
-    }
-    console.log(`书籍 ${bookId} 已更新`);
-    return { success: true };
-  } catch (error) {
-    console.error('更新书籍时出错:', error);
-    return { success: false, error: error.message };
-  }
-});
 
 
 
 // 注册数据库相关的IPC处理器
 function registerDatabaseHandlers() {
+  // 获取所有书籍 (兼容旧API)
+  ipcMain.handle('load-books', async () => {
+    try {
+      const books = getAllBooks();
+      console.log(`从数据库加载了 ${books.length} 本书籍`);
+      return books;
+    } catch (error) {
+      console.error('从数据库加载书籍时出错:', error);
+      return [];
+    }
+  });
+
+  // 保存书籍数据 (已弃用，现在使用数据库)
+  ipcMain.handle('save-books', async () => {
+    try {
+      console.log('save-books API 已弃用，现在使用数据库存储');
+      return { success: true };
+    } catch (error) {
+      console.error('保存书籍数据时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取所有书籍 (新API)
+  ipcMain.handle('get-all-books', async (event) => {
+    try {
+      const books = getAllBooks();
+      console.log(`从数据库加载了 ${books.length} 本书籍`);
+      return books;
+    } catch (error) {
+      console.error('从数据库加载书籍时出错:', error);
+      return [];
+    }
+  });
+
+  // 创建书籍
+  ipcMain.handle('create-book', async (event, book: any) => {
+    try {
+      const newBook = createBook(book);
+      console.log(`创建了新的书籍: ${newBook.id}`);
+      return newBook;
+    } catch (error) {
+      console.error('创建书籍时出错:', error);
+      throw error;
+    }
+  });
+
+  // 更新书籍
+  ipcMain.handle('update-book', async (event, id: string, updates: any) => {
+    try {
+      const success = updateBook(id, updates);
+      if (success) {
+        console.log(`书籍 ${id} 已更新`);
+        return { success: true };
+      } else {
+        return { success: false, error: '书籍不存在' };
+      }
+    } catch (error) {
+      console.error('更新书籍时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 删除书籍
+  ipcMain.handle('delete-book', async (event, id: string) => {
+    try {
+      const success = deleteBook(id);
+      if (success) {
+        console.log(`书籍 ${id} 已删除`);
+        return { success: true };
+      } else {
+        return { success: false, error: '书籍不存在' };
+      }
+    } catch (error) {
+      console.error('删除书籍时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // 获取书籍的笔记连接
   ipcMain.handle('get-note-connections-by-book-id', async (event, bookId: string) => {
     try {
@@ -575,14 +601,126 @@ function registerDatabaseHandlers() {
     }
   });
 
-  // 批量更新注释的视觉属性
-  ipcMain.handle('batch-update-annotation-visuals', async (event, bookId: string, annotations: any[]) => {
+  // 获取注释
+  ipcMain.handle('get-annotations-by-book-id', async (event, bookId: string) => {
     try {
-      batchUpdateAnnotationVisuals(bookId, annotations);
-      console.log(`批量更新了 ${annotations.length} 个注释的视觉属性`);
+      const annotations = getAnnotationsByBookId(bookId);
+      console.log(`从数据库加载了 ${annotations.length} 个注释`);
+      return annotations;
+    } catch (error) {
+      console.error('从数据库加载注释时出错:', error);
+      return [];
+    }
+  });
+
+  // 创建注释
+  ipcMain.handle('create-annotation', async (event, bookId: string, annotation: any) => {
+    try {
+      const newAnnotation = createAnnotation(bookId, annotation);
+      console.log(`创建了新的注释: ${newAnnotation.id}`);
+      return newAnnotation;
+    } catch (error) {
+      console.error('创建注释时出错:', error);
+      throw error;
+    }
+  });
+
+  // 删除注释
+  ipcMain.handle('delete-annotation', async (event, id: string) => {
+    try {
+      const success = deleteAnnotation(id);
+      if (success) {
+        console.log(`注释 ${id} 已删除`);
+        return { success: true };
+      } else {
+        return { success: false, error: '注释不存在' };
+      }
+    } catch (error) {
+      console.error('删除注释时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取卡片
+  ipcMain.handle('get-cards-by-annotation-ids', async (event, annotationIds: string[]) => {
+    try {
+      const cards = getCardsByAnnotationIds(annotationIds);
+      console.log(`从数据库加载了 ${cards.length} 个卡片`);
+      return cards;
+    } catch (error) {
+      console.error('从数据库加载卡片时出错:', error);
+      return [];
+    }
+  });
+
+  // 创建卡片
+  ipcMain.handle('create-card', async (event, annotationId: string, card: any) => {
+    try {
+      const newCard = createCard(annotationId, card);
+      console.log(`创建了新的卡片: ${newCard.id}`);
+      return newCard;
+    } catch (error) {
+      console.error('创建卡片时出错:', error);
+      throw error;
+    }
+  });
+
+  // 更新卡片
+  ipcMain.handle('update-card', async (event, id: string, updates: any) => {
+    try {
+      const success = updateCard(id, updates);
+      if (success) {
+        console.log(`卡片 ${id} 已更新`);
+        return { success: true };
+      } else {
+        return { success: false, error: '卡片不存在' };
+      }
+    } catch (error) {
+      console.error('更新卡片时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 批量更新卡片
+  ipcMain.handle('batch-update-cards', async (event, cards: any[]) => {
+    try {
+      batchUpdateCards(cards);
+      console.log(`批量更新了 ${cards.length} 个卡片`);
       return { success: true };
     } catch (error) {
-      console.error('批量更新注释视觉属性时出错:', error);
+      console.error('批量更新卡片时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 删除卡片
+  ipcMain.handle('delete-cards-by-annotation-id', async (event, annotationId: string) => {
+    try {
+      const success = deleteCardsByAnnotationId(annotationId);
+      if (success) {
+        console.log(`注释 ${annotationId} 的卡片已删除`);
+        return { success: true };
+      } else {
+        return { success: false, error: '注释不存在' };
+      }
+    } catch (error) {
+      console.error('删除卡片时出错:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 批量删除卡片
+  ipcMain.handle('delete-cards', async (event, ids: string[]) => {
+    try {
+      const success = deleteCards(ids);
+      if (success) {
+        console.log(`删除了 ${ids.length} 个卡片`);
+        return { success: true };
+      } else {
+        return { success: false, error: '删除失败' };
+      }
+    } catch (error) {
+      console.error('批量删除卡片时出错:', error);
       return { success: false, error: error.message };
     }
   });

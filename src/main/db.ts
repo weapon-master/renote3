@@ -3,6 +3,7 @@ import { getDatabase } from './db/common';
 
 export * from './db/book';
 export * from './db/annotation';
+export * from './db/card';
 export * from './db/connection';
 
 export { getDatabase, initDatabase, closeDatabase } from './db/common';

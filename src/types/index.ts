@@ -1,36 +1,5 @@
-export interface Book {
-  id: string;
-  title: string;
-  coverPath?: string;
-  filePath: string;
-  author?: string;
-  description?: string;
-  annotations?: Annotation[];
-  readingProgress?: string; // CFI string for current reading position
-}
-
-export interface Annotation {
-  id: string;
-  cfiRange: string;
-  text: string; // selected text snapshot
-  note: string;
-  position?: { x: number; y: number };  // Visual position for note cards
-  width?: number;                       // Card width
-  height?: number;                      // Card height
-  createdAt: string; // ISO string
-  updatedAt?: string; // ISO string
-}
-
-export interface NoteConnection {
-  id: string;
-  bookId: string;
-  fromAnnotationId: string;
-  toAnnotationId: string;
-  direction: 'none' | 'bidirectional' | 'unidirectional-forward' | 'unidirectional-backward';
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Book, Annotation, Card, NoteConnection } from '../main/db/$schema.d';
+export type { Book, Annotation, Card, NoteConnection };
 
 // Electron API 类型声明
 declare global {
@@ -68,14 +37,33 @@ declare global {
       };
 
       db: {
+        // 书籍相关
+        getAllBooks: () => Promise<Book[]>;
+        createBook: (book: Omit<Book, 'id'>) => Promise<Book>;
+        updateBook: (id: string, updates: Partial<Omit<Book, 'id'>>) => Promise<{ success: boolean; error?: string }>;
+        deleteBook: (id: string) => Promise<{ success: boolean; error?: string }>;
+        updateReadingProgress: (bookId: string, progress: string) => Promise<{ success: boolean; error?: string }>;
+        
+        // 注释相关
+        getAnnotationsByBookId: (bookId: string) => Promise<Annotation[]>;
+        createAnnotation: (bookId: string, annotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Annotation>;
+        updateAnnotation: (id: string, updates: Partial<Pick<Annotation, 'note' | 'title' | 'color'>>) => Promise<{ success: boolean; error?: string }>;
+        deleteAnnotation: (id: string) => Promise<{ success: boolean; error?: string }>;
+        
+        // 卡片相关
+        getCardsByAnnotationIds: (annotationIds: string[]) => Promise<Card[]>;
+        createCard: (annotationId: string, card: Omit<Card, 'id'>) => Promise<Card>;
+        updateCard: (id: string, updates: Partial<Pick<Card, 'position' | 'width' | 'height'>>) => Promise<{ success: boolean; error?: string }>;
+        batchUpdateCards: (cards: Card[]) => Promise<{ success: boolean; error?: string }>;
+        deleteCardsByAnnotationId: (annotationId: string) => Promise<{ success: boolean; error?: string }>;
+        deleteCards: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
+        
+        // 笔记连接相关
         getNoteConnectionsByBookId: (bookId: string) => Promise<NoteConnection[]>;
-        createNoteConnection: (connection: Omit<NoteConnection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<NoteConnection>;
-        updateNoteConnection: (id: string, updates: Partial<Omit<NoteConnection, 'id' | 'bookId' | 'fromAnnotationId' | 'toAnnotationId' | 'createdAt'>>) => Promise<{ success: boolean; error?: string }>;
+        createNoteConnection: (connection: Omit<NoteConnection, 'id'>) => Promise<NoteConnection>;
+        updateNoteConnection: (id: string, updates: Partial<Pick<NoteConnection, 'description'>>) => Promise<{ success: boolean; error?: string }>;
         deleteNoteConnection: (id: string) => Promise<{ success: boolean; error?: string }>;
         batchUpdateNoteConnections: (bookId: string, connections: NoteConnection[]) => Promise<{ success: boolean; error?: string }>;
-        updateAnnotation: (id: string, updates: Partial<Omit<Annotation, 'id' | 'createdAt'>>) => Promise<{ success: boolean; error?: string }>;
-        batchUpdateAnnotationVisuals: (bookId: string, annotations: Array<{ id: string; position?: { x: number; y: number }; width?: number; height?: number }>) => Promise<{ success: boolean; error?: string }>;
-        updateReadingProgress: (bookId: string, progress: string) => Promise<{ success: boolean; error?: string }>;
       };
     };
   }

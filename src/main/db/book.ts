@@ -1,5 +1,6 @@
-import { getDatabase } from './common'
-import { Book } from '../../types';
+import { Book } from "./$schema";
+import { getDatabase } from "./common";
+
 
 export function getAllBooks(): Book[] {
   const database = getDatabase();
@@ -9,13 +10,7 @@ export function getAllBooks(): Book[] {
     FROM books
     ORDER BY created_at DESC
   `);
-  
-  const annotationsStmt = database.prepare(`
-    SELECT id, cfi_range, text, note, position_x, position_y, width, height, created_at, updated_at
-    FROM annotations
-    WHERE book_id = ?
-    ORDER BY created_at ASC
-  `);
+
   
   const books = booksStmt.all() as any[];
   
@@ -27,17 +22,6 @@ export function getAllBooks(): Book[] {
     author: book.author,
     description: book.description,
     readingProgress: book.reading_progress || undefined,
-    annotations: annotationsStmt.all(book.id).map((ann: any) => ({
-      id: ann.id,
-      cfiRange: ann.cfi_range,
-      text: ann.text,
-      note: ann.note,
-      position: ann.position_x !== null && ann.position_y !== null ? { x: ann.position_x, y: ann.position_y } : undefined,
-      width: ann.width !== null ? ann.width : undefined,
-      height: ann.height !== null ? ann.height : undefined,
-      createdAt: ann.created_at,
-      updatedAt: ann.updated_at
-    }))
   }));
 }
 
@@ -49,14 +33,7 @@ export function getBookById(id: string): Book | null {
     FROM books
     WHERE id = ?
   `);
-  
-  const annotationsStmt = database.prepare(`
-    SELECT id, cfi_range, text, note, created_at, updated_at
-    FROM annotations
-    WHERE book_id = ?
-    ORDER BY created_at ASC
-  `);
-  
+
   const book = bookStmt.get(id) as any;
   
   if (!book) {
@@ -71,14 +48,6 @@ export function getBookById(id: string): Book | null {
     author: book.author,
     description: book.description,
     readingProgress: book.reading_progress || undefined,
-    annotations: annotationsStmt.all(id).map((ann: any) => ({
-      id: ann.id,
-      cfiRange: ann.cfi_range,
-      text: ann.text,
-      note: ann.note,
-      createdAt: ann.created_at,
-      updatedAt: ann.updated_at
-    }))
   };
 }
 
@@ -110,11 +79,10 @@ export function createBook(book: Omit<Book, 'id' | 'annotations'>): Book {
     author: book.author,
     description: book.description,
     readingProgress: book.readingProgress,
-    annotations: []
   };
 }
 
-export function updateBook(id: string, updates: Partial<Omit<Book, 'id' | 'annotations'>>): boolean {
+export function updateBook(id: string, updates: Partial<Omit<Book, 'id'>>): boolean {
   const database = getDatabase();
   
   const fields = [];

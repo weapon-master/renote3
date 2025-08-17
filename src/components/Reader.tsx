@@ -54,12 +54,21 @@ const Reader: React.FC = () => {
     loadBook();
   }, [bookId, navigate]);
 
-  // Sync annotations when book annotations change
+  // Load annotations from database when book changes
   useEffect(() => {
-    if (book) {
-      setAnnotations(book.annotations || []);
-    }
-  }, [book?.annotations]);
+    const loadAnnotations = async () => {
+      if (book && window.electron?.db?.getAnnotationsByBookId) {
+        try {
+          const loadedAnnotations = await window.electron.db.getAnnotationsByBookId(book.id);
+          setAnnotations(loadedAnnotations);
+        } catch (error) {
+          console.error('Failed to load annotations:', error);
+        }
+      }
+    };
+    
+    loadAnnotations();
+  }, [book?.id]);
 
   const handleBack = () => {
     navigate('/bookshelf');

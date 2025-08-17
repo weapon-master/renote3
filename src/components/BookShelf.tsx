@@ -14,8 +14,8 @@ const BookShelf: React.FC = () => {
     try {
       setIsLoading(true);
       const electron = (window as any).electron;
-      if (electron && electron.books) {
-        const savedBooks = await electron.books.load();
+      if (electron && electron.db) {
+        const savedBooks = await electron.db.getAllBooks();
         console.log('从数据库加载的书籍:', savedBooks);
         setBooks(savedBooks || []);
       }
@@ -65,8 +65,8 @@ const BookShelf: React.FC = () => {
   const handleDeleteBook = async (bookId: string) => {
     try {
       const electron = (window as any).electron;
-      if (electron && electron.books) {
-        const result = await electron.books.delete(bookId);
+      if (electron && electron.db) {
+        const result = await electron.db.deleteBook(bookId);
         if (result.success) {
           setBooks(books.filter(book => book.id !== bookId));
         } else {
@@ -84,8 +84,8 @@ const BookShelf: React.FC = () => {
   const handleEditBookTitle = async (bookId: string, newTitle: string) => {
     try {
       const electron = (window as any).electron;
-      if (electron && electron.books) {
-        const result = await electron.books.update(bookId, { title: newTitle });
+      if (electron && electron.db) {
+        const result = await electron.db.updateBook(bookId, { title: newTitle });
         if (result.success) {
           setBooks(books.map(book => 
             book.id === bookId ? { ...book, title: newTitle } : book

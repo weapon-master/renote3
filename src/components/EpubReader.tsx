@@ -12,7 +12,7 @@ interface EpubReaderProps {
 
 const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnnotationsChange }) => {
   const [location, setLocation] = useState<string | number>(book.readingProgress || 0);
-  const [annotations, setAnnotations] = useState<Annotation[]>(book.annotations || []);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const renditionRef = useRef<any>(null);
   const [pendingSelection, setPendingSelection] = useState<{ id?: string; cfiRange: string; text: string } | null>(null);
   const [noteDraft, setNoteDraft] = useState<string>('');
@@ -71,6 +71,22 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
       (window as any).navigateToAnnotation = navigateToAnnotation;
     }
   }, [onAnnotationClick, renditionRef.current]);
+
+  // Load annotations from database
+  useEffect(() => {
+    const loadAnnotations = async () => {
+      try {
+        if (window.electron?.db?.getAnnotationsByBookId) {
+          const loadedAnnotations = await window.electron.db.getAnnotationsByBookId(book.id);
+          setAnnotations(loadedAnnotations);
+        }
+      } catch (error) {
+        console.error('Failed to load annotations:', error);
+      }
+    };
+    
+    loadAnnotations();
+  }, [book.id]);
 
   // Notify parent component when annotations change
   useEffect(() => {
@@ -277,17 +293,20 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     }
     let next: Annotation[];
     if (pendingSelection.id) {
-      next = annotations.map(a => a.id === pendingSelection.id ? { ...a, note: noteDraft.trim(), updatedAt: new Date().toISOString() } : a);
+      next = annotations.map(a => a.id === pendingSelection.id ? { ...a, note: noteDraft.trim(), updatedAt: Date.now() } : a);
     } else {
       const newAnn: Annotation = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        bookId: book.id,
         cfiRange: pendingSelection.cfiRange,
         text: pendingSelection.text,
+        title: `Note ${annotations.length + 1}`,
         note: noteDraft.trim(),
-        position: { x: 50, y: 50 }, // Default position
-        width: 200, // Default width
-        height: 120, // Default height
-        createdAt: new Date().toISOString(),
+        color: {
+          rgba: 'rgba(255, 255, 0, 0.3)',
+          category: 'default'
+        },
+        createdAt: Date.now(),
       };
       next = [...annotations, newAnn];
     }
@@ -298,7 +317,14 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     setHoverToolbar(null);
     // Persist to storage via Electron API
     try {
-      await window.electron?.books?.update?.(book.id, { annotations: next });
+      if (pendingSelection.id) {
+        // Update existing annotation
+        await window.electron?.db?.updateAnnotation?.(pendingSelection.id, { note: noteDraft.trim() });
+      } else {
+        // Create new annotation
+        const newAnnotation = next[next.length - 1];
+        await window.electron?.db?.createAnnotation?.(book.id, newAnnotation);
+      }
     } catch (e) {
       console.error('保存批注失败', e);
     }
@@ -308,7 +334,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({ book, onAnnotationClick, onAnno
     const next = annotations.filter(a => a.id !== id);
     setAnnotations(next);
     try {
-      await window.electron?.books?.update?.(book.id, { annotations: next });
+      await window.electron?.db?.deleteAnnotation?.(id);
     } catch (e) {
       console.error('删除批注失败', e);
     }

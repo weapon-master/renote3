@@ -47,14 +47,33 @@ contextBridge.exposeInMainWorld('electron', {
 
   // 数据库API
   db: {
+    // 书籍相关
+    getAllBooks: () => ipcRenderer.invoke('get-all-books'),
+    createBook: (book: any) => ipcRenderer.invoke('create-book', book),
+    updateBook: (id: string, updates: any) => ipcRenderer.invoke('update-book', id, updates),
+    deleteBook: (id: string) => ipcRenderer.invoke('delete-book', id),
+    updateReadingProgress: (bookId: string, progress: string) => ipcRenderer.invoke('update-reading-progress', bookId, progress),
+    
+    // 注释相关
+    getAnnotationsByBookId: (bookId: string) => ipcRenderer.invoke('get-annotations-by-book-id', bookId),
+    createAnnotation: (bookId: string, annotation: any) => ipcRenderer.invoke('create-annotation', bookId, annotation),
+    updateAnnotation: (id: string, updates: any) => ipcRenderer.invoke('update-annotation', id, updates),
+    deleteAnnotation: (id: string) => ipcRenderer.invoke('delete-annotation', id),
+    
+    // 卡片相关
+    getCardsByAnnotationIds: (annotationIds: string[]) => ipcRenderer.invoke('get-cards-by-annotation-ids', annotationIds),
+    createCard: (annotationId: string, card: any) => ipcRenderer.invoke('create-card', annotationId, card),
+    updateCard: (id: string, updates: any) => ipcRenderer.invoke('update-card', id, updates),
+    batchUpdateCards: (cards: any[]) => ipcRenderer.invoke('batch-update-cards', cards),
+    deleteCardsByAnnotationId: (annotationId: string) => ipcRenderer.invoke('delete-cards-by-annotation-id', annotationId),
+    deleteCards: (ids: string[]) => ipcRenderer.invoke('delete-cards', ids),
+    
+    // 笔记连接相关
     getNoteConnectionsByBookId: (bookId: string) => ipcRenderer.invoke('get-note-connections-by-book-id', bookId),
     createNoteConnection: (connection: any) => ipcRenderer.invoke('create-note-connection', connection),
     updateNoteConnection: (id: string, updates: any) => ipcRenderer.invoke('update-note-connection', id, updates),
     deleteNoteConnection: (id: string) => ipcRenderer.invoke('delete-note-connection', id),
-    batchUpdateNoteConnections: (bookId: string, connections: any[]) => ipcRenderer.invoke('batch-update-note-connections', bookId, connections),
-    updateAnnotation: (id: string, updates: any) => ipcRenderer.invoke('update-annotation', id, updates),
-    batchUpdateAnnotationVisuals: (bookId: string, annotations: any[]) => ipcRenderer.invoke('batch-update-annotation-visuals', bookId, annotations),
-    updateReadingProgress: (bookId: string, progress: string) => ipcRenderer.invoke('update-reading-progress', bookId, progress)
+    batchUpdateNoteConnections: (bookId: string, connections: any[]) => ipcRenderer.invoke('batch-update-note-connections', bookId, connections)
   }
 });
 

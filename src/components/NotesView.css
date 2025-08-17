@@ -29,42 +29,6 @@
   align-items: center;
 }
 
-.zoom-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 2px;
-}
-
-.zoom-btn {
-  width: 24px;
-  height: 24px;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 2px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s;
-}
-
-.zoom-btn:hover {
-  background: #e9ecef;
-}
-
-.zoom-level {
-  font-size: 12px;
-  color: #495057;
-  min-width: 40px;
-  text-align: center;
-}
-
 .clear-connections-btn {
   padding: 6px 12px;
   background: #dc3545;
@@ -104,100 +68,144 @@
   line-height: 1.3;
 }
 
+.notes-instructions strong {
+  color: #1976d2;
+}
+
+.notes-instructions strong {
+  color: #1976d2;
+}
+
 .notes-canvas {
   flex: 1;
   position: relative;
   overflow: hidden;
   background: #f8f9fa;
-  background-image: 
-    radial-gradient(circle, #e0e0e0 1px, transparent 1px);
-  background-size: 20px 20px;
-  cursor: grab;
 }
 
-.notes-canvas:active {
-  cursor: grabbing;
+/* ReactFlow custom styles */
+.react-flow__node {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s, transform 0.1s;
 }
 
-.canvas-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  min-width: 100%;
-  min-height: 100%;
+.react-flow__node:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
-.connections-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.connections-layer path {
-  pointer-events: auto;
+.react-flow__edge {
+  stroke-width: 2;
+  stroke: #666;
   cursor: pointer;
 }
 
-/* Hover effect for the invisible interaction paths */
-.connections-layer path[stroke="transparent"]:hover + path {
+.react-flow__edge:hover {
   stroke-width: 3;
   stroke: #007bff;
   filter: drop-shadow(0 0 2px rgba(0, 123, 255, 0.5));
 }
 
-.note-card {
-  position: absolute;
+.react-flow__edge.selected {
+  stroke-width: 3;
+  stroke: #007bff;
+  filter: drop-shadow(0 0 4px rgba(0, 123, 255, 0.7));
+}
+
+.react-flow__edge-path {
+  stroke-width: inherit;
+  stroke: inherit;
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.react-flow__controls button {
+  border-radius: 4px;
+  background: white;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.react-flow__controls button:hover {
+  background: #f8f9fa;
+}
+
+.react-flow__minimap {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom Note Node Styles */
+.note-node {
   background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   cursor: move;
   user-select: none;
-  z-index: 2;
-  transition: box-shadow 0.2s, transform 0.1s;
   overflow: hidden;
+  min-width: 200px;
+  min-height: 120px;
+  position: relative;
+  transition: all 0.2s ease;
 }
 
-.note-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
-}
-
-.note-card.connection-start {
+.note-node.connecting {
   border: 2px solid #007bff;
   box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2);
-}
-
-.note-card.connection-target {
-  border: 2px solid #28a745;
-  box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.3);
   animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(40, 167, 69, 0.2);
+    box-shadow: 0 0 0 8px rgba(0, 123, 255, 0.1);
   }
   100% {
-    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2);
   }
 }
 
-.note-card.connecting {
-  opacity: 0.7;
-  cursor: crosshair;
+.connection-indicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: #007bff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bounce 0.6s infinite;
 }
 
-.card-header {
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+.node-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -207,18 +215,23 @@
   font-size: 12px;
 }
 
-.card-title {
+.node-title {
   font-weight: 600;
   color: #495057;
 }
 
-.card-date {
+.node-date {
   color: #6c757d;
   font-size: 11px;
 }
 
-.card-content {
+.node-content {
   padding: 12px;
+  cursor: pointer;
+}
+
+.node-content:hover {
+  background: #f8f9fa;
 }
 
 .selected-text {
@@ -245,6 +258,72 @@
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+/* Direction Modal Styles */
+.direction-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.direction-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.direction-options button:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.direction-icon {
+  font-size: 24px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+/* Direction Modal Styles */
+.direction-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.direction-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.direction-options button:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.direction-icon {
+  font-size: 24px;
+  font-weight: bold;
+  color: #007bff;
 }
 
 /* Modal styles */
@@ -339,5 +418,9 @@
   .modal-content {
     min-width: 300px;
     margin: 16px;
+  }
+  
+  .direction-options {
+    grid-template-columns: 1fr;
   }
 }
