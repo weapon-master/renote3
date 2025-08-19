@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Annotation, Book } from '../types';
+import { Annotation, Book } from '../../../types';
 import { ReactReader } from 'react-reader';
-import { AnnotationColor } from '../const/annotation-color';
+import { AnnotationColor } from '../../../const/annotation-color';
 import './EpubReader.css';
 
 interface EpubReaderProps {

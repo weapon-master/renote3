@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Book, Annotation } from '../types';
-import EpubReader from './EpubReader';
-import NotesView from './NotesView';
-import '../components/Reader.css';
+import { Book, Annotation } from '../../types';
+import EpubReader from './components/EpubReader';
+import NotesView from '../../components/NotesView';
+import './Reader.css';
 
 const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();

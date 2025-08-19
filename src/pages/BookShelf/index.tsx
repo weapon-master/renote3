@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BookItem from './BookItem';
-import { Book } from '../types';
-import '../components/BookShelf.css';
+import BookItem from './components/BookItem';
+import { Book } from '../../types';
+import './BookShelf.css';
 
 const BookShelf: React.FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
