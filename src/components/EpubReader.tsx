@@ -610,11 +610,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({
       };
       next = [...annotations, newAnn];
     }
-    setAnnotations(next);
-    setShowNoteModal(false);
-    setPendingSelection(null);
-    setToolbarPosition(null);
-    setHoverToolbar(null);
     // Persist to storage via Electron API
     try {
       if (pendingSelection.id) {
@@ -626,15 +621,49 @@ const EpubReader: React.FC<EpubReaderProps> = ({
             category: 'default',
           },
         });
+        // Update local state after successful database update
+        setAnnotations(next);
       } else {
         // Create new annotation
         const newAnnotation = next[next.length - 1];
         console.log('Saving new annotation with color:', newAnnotation.color);
-        await window.electron?.db?.createAnnotation?.(book.id, newAnnotation);
+        const savedAnnotation = await window.electron?.db?.createAnnotation?.(book.id, newAnnotation);
+        
+        // Create a default card for the new annotation
+        if (savedAnnotation) {
+          try {
+            const defaultCard = {
+              annotationId: savedAnnotation.id,
+              position: { x: 50 + annotations.length * 200, y: 50 + annotations.length * 150 },
+              width: 200,
+              height: 120,
+            };
+            console.log('Creating default card for new annotation:', savedAnnotation.id);
+            const savedCard = await window.electron?.db?.createCard?.(savedAnnotation.id, defaultCard);
+            console.log('Successfully created card for annotation:', savedAnnotation.id, 'with card ID:', savedCard?.id);
+          } catch (cardError) {
+            console.error('创建注释卡片失败', cardError);
+          }
+        }
+        
+        // Update local state after successful database operations
+        // Use the saved annotation from database instead of the local one
+        if (savedAnnotation) {
+          const updatedAnnotations = [...annotations, savedAnnotation];
+          setAnnotations(updatedAnnotations);
+        } else {
+          setAnnotations(next);
+        }
       }
     } catch (e) {
       console.error('保存批注失败', e);
     }
+    
+    // Clear UI state
+    setShowNoteModal(false);
+    setPendingSelection(null);
+    setToolbarPosition(null);
+    setHoverToolbar(null);
   };
 
   const removeAnnotation = async (id: string) => {

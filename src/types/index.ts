@@ -54,7 +54,7 @@ declare global {
         getCardsByAnnotationIds: (annotationIds: string[]) => Promise<Card[]>;
         createCard: (annotationId: string, card: Omit<Card, 'id'>) => Promise<Card>;
         updateCard: (id: string, updates: Partial<Pick<Card, 'position' | 'width' | 'height'>>) => Promise<{ success: boolean; error?: string }>;
-        batchUpdateCards: (cards: Card[]) => Promise<{ success: boolean; error?: string }>;
+        batchUpdateCards: (cards: Card[]) => Promise<{ success: boolean; error?: string; details?: string[] }>;
         deleteCardsByAnnotationId: (annotationId: string) => Promise<{ success: boolean; error?: string }>;
         deleteCards: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
         

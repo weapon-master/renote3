@@ -78,6 +78,15 @@ export default function NoteFlow({
   
   // 监听initialNodes和initialEdges的变化，更新内部状态
   useEffect(() => {
+    console.log('NoteFlow: initialNodes changed', {
+      initialNodesLength: initialNodes.length,
+      nodesLength: nodes.length,
+      initialNodeIds: initialNodes.map(n => n.id),
+      nodeIds: nodes.map(n => n.id)
+    });
+    
+    // 简化逻辑：直接设置节点，让React Flow处理位置保持
+    console.log('NoteFlow: Setting nodes to', initialNodes.length, 'nodes');
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
   

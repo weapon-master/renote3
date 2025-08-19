@@ -684,9 +684,13 @@ function registerDatabaseHandlers() {
   // 批量更新卡片
   ipcMain.handle('batch-update-cards', async (event, cards: any[]) => {
     try {
-      batchUpdateCards(cards);
-      console.log(`批量更新了 ${cards.length} 个卡片`);
-      return { success: true };
+      const result = batchUpdateCards(cards);
+      if (result.success) {
+        console.log(`批量更新了 ${cards.length} 个卡片`);
+      } else {
+        console.error('批量更新卡片失败:', result.error);
+      }
+      return result;
     } catch (error) {
       console.error('批量更新卡片时出错:', error);
       return { success: false, error: error.message };
