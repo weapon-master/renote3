@@ -5,9 +5,11 @@ type NewBook = Omit<Book, 'id'>;
 
 type BookStore = {
   books: Book[];
+  loading: boolean;
   currBook: Book | null;
   loadBooks: () => Promise<void>;
   createBook: (book: NewBook) => Promise<void>;
+  importBooks: (books: NewBook[]) => Promise<void>;
   updateBook: (bookId: string, update: Partial<NewBook>) => Promise<void>;
   updateReadingProgress: (
     bookId: string,
@@ -19,6 +21,7 @@ type BookStore = {
 export const useBookStore = create<BookStore>((set, get) => ({
   books: [],
   currBook: null,
+  loading: false,
   selectBook: (bookId: string) => {
     const currBookId = bookId;
     set({
@@ -26,12 +29,26 @@ export const useBookStore = create<BookStore>((set, get) => ({
     });
   },
   loadBooks: async () => {
+    set(() => ({ loading: true }));
     const books = await window.electron.db.getAllBooks();
-    set(() => ({ books }));
+    set(() => ({ books, loading: false }));
   },
   createBook: async (book: NewBook) => {
     await window.electron.db.createBook(book);
     await get().loadBooks();
+  },
+  importBooks: async (importedBooks: Book[]) => {
+    const { books: prevBooks } = get();
+    const existingFilePaths = new Set(prevBooks.map((book) => book.filePath));
+    const newBooks = importedBooks.filter(
+      (book) => !existingFilePaths.has(book.filePath),
+    );
+    if (newBooks.length <= 0) {
+      console.log('No new books to add');
+      return;
+    }
+    set((state) => ({ books: [...state.books, ...newBooks] }));
+    console.log(`Adding ${newBooks.length} new books to shelf`);
   },
   updateBook: async (bookId: string, update: Partial<NewBook>) => {
     const { success, error } = await window.electron.db.updateBook(
