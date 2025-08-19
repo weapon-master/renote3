@@ -1,0 +1,76 @@
+import { Book } from '../main/db/$schema';
+import { create } from 'zustand';
+
+type NewBook = Omit<Book, 'id'>;
+
+type BookStore = {
+  books: Book[];
+  currBook: Book | null;
+  loadBooks: () => Promise<void>;
+  createBook: (book: NewBook) => Promise<void>;
+  updateBook: (bookId: string, update: Partial<NewBook>) => Promise<void>;
+  updateReadingProgress: (
+    bookId: string,
+    readingProgress: string,
+  ) => Promise<void>;
+  deleteBook: (bookId: string) => Promise<void>;
+};
+
+export const useBookStore = create<BookStore>((set, get) => ({
+  books: [],
+  currBook: null,
+  selectBook: (bookId: string) => {
+    const currBookId = bookId;
+    set({
+      currBook: get().books.find((item) => item.id === currBookId) ?? null,
+    });
+  },
+  loadBooks: async () => {
+    const books = await window.electron.db.getAllBooks();
+    set(() => ({ books }));
+  },
+  createBook: async (book: NewBook) => {
+    await window.electron.db.createBook(book);
+    await get().loadBooks();
+  },
+  updateBook: async (bookId: string, update: Partial<NewBook>) => {
+    const { success, error } = await window.electron.db.updateBook(
+      bookId,
+      update,
+    );
+    if (!success) {
+      console.error(error);
+      return;
+    }
+    set((state) => ({
+      books: state.books.map((item) =>
+        item.id === bookId ? { ...item, ...update } : item,
+      ),
+    }));
+  },
+  updateReadingProgress: async (bookId: string, readingProgress: string) => {
+    const { success, error } = await window.electron.db.updateReadingProgress(
+      bookId,
+      readingProgress,
+    );
+    if (!success) {
+      console.error(error);
+      return;
+    }
+    set((state) => ({
+      books: state.books.map((item) =>
+        item.id === bookId ? { ...item, readingProgress } : item,
+      ),
+    }));
+  },
+  deleteBook: async (bookId: string) => {
+    const { success, error } = await window.electron.db.deleteBook(bookId);
+    if (!success) {
+      console.error(error);
+      return;
+    }
+    set((state) => ({
+      books: state.books.filter((item) => item.id !== bookId),
+    }));
+  },
+}));

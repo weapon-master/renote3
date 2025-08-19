@@ -54,6 +54,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-reader": "^2.0.13",
-    "react-router-dom": "^7.8.0"
+    "react-router-dom": "^7.8.0",
+    "zustand": "^5.0.7"
   }
 }
