@@ -8,6 +8,7 @@ type ConnectionStore = {
   bookId: string;
   loadConnectionsByBookId: (bookId: string) => Promise<void>;
   createConnection: (connection: NewConnection) => Promise<void>;
+  batchCreateConnections: (bookId: string, connections: Connection[]) =>Promise<void>;
   updateConnection: (
     id: string,
     connection: Partial<NewConnection>,
@@ -24,18 +25,15 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     set(() => ({ connections, bookId }));
   },
   createConnection: async (connection: NewConnection) => {
-    const { bookId, loadConnectionsByBookId } = get();
-    if (connection.bookId !== bookId) {
-      console.error(
-        `Cannot insert connections to other books, current book id: ${bookId}, insert to book id: ${connection.bookId}`,
-      );
-      return;
-    }
-    await window.electron.db.createNoteConnection(connection);
-
-    loadConnectionsByBookId(bookId);
+    const newConn = await window.electron.db.createNoteConnection(connection);
+    set(state => ({ connections: [...state.connections, newConn]}))
+    // loadConnectionsByBookId(bookId);
   },
-  updateConnection: async (id: string, connection: Partial<NewConnection>) => {
+  batchCreateConnections: async(bookId: string, connections: Connection[]) => {
+    await window.electron.db.batchUpdateNoteConnections(bookId, connections);
+    set(state => ({ connections: [...state.connections, ...connections]}))
+  }
+,  updateConnection: async (id: string, connection: Partial<NewConnection>) => {
     const { success, error } = await window.electron.db.updateNoteConnection(
       id,
       connection,

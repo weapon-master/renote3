@@ -9,20 +9,23 @@ const NoteNode: React.FC<{
     data: {
       annotation: Annotation;
       onCardClick: (annotation: Annotation) => void;
+      highlight: boolean
     };
     id: string;
   }> = ({ data, id }) => {
     const { annotation, onCardClick } = data;
   
-
+    const annotationColor = annotation.color?.rgba || AnnotationColor.HighlightYellow;
   
     return (
-      <div>
+      <div style={{
+        backgroundColor: data.highlight ? annotationColor : '',
+      }}>
         <div 
           className="node-header"
           style={{ 
-            backgroundColor: annotation.color?.rgba || AnnotationColor.HighlightYellow,
-            borderBottom: `2px solid ${annotation.color?.rgba || AnnotationColor.HighlightYellow}`
+            backgroundColor: annotationColor,
+            borderBottom: `2px solid ${annotationColor}`
           }}
         >
           <span className="node-title">Note</span>

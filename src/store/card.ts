@@ -7,7 +7,7 @@ type CardStore = {
   cards: Card[];
   annotationIds: string[];
   loadCardsByAnnotationIds: (annotationIds: string[]) => Promise<void>;
-  createCard: (card: NewCard) => Promise<void>;
+  createCard: (card: NewCard) => Promise<Card>;
   updateCard: (id: string, update: Partial<NewCard>) => Promise<void>;
   deleteCard: (id: string) => Promise<void>;
 };
@@ -21,9 +21,11 @@ export const useCardStore = create<CardStore>((set, get) => ({
     set(() => ({ cards, annotationIds }));
   },
   createCard: async (card) => {
-    await window.electron.db.createCard(card.annotationId, card);
-    const { annotationIds } = get();
-    await get().loadCardsByAnnotationIds([...annotationIds, card.annotationId]);
+    const result = await window.electron.db.createCard(card.annotationId, card);
+    // const { annotationIds } = get();
+    // await get().loadCardsByAnnotationIds([...annotationIds, card.annotationId]);
+    set(state => ({ cards: [...state.cards, result], annotationIds: [...state.annotationIds, card.annotationId]}))
+    return result;
   },
   updateCard: async (id: string, update: Partial<NewCard>) => {
     const { success, error } = await window.electron.db.updateCard(id, update);

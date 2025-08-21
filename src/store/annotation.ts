@@ -9,7 +9,7 @@ type AnnotationStore = {
   createAnnotation: (
     bookId: string,
     annotation: NewAnnotation,
-  ) => Promise<void>;
+  ) => Promise<Annotation>;
   updateAnnotation: (
     id: string,
     update: Partial<NewAnnotation>,
@@ -24,8 +24,9 @@ export const useAnnotationStore = create<AnnotationStore>((set, get) => ({
     set(() => ({ annotations }));
   },
   createAnnotation: async (bookId: string, annotation: NewAnnotation) => {
-    await window.electron.db.createAnnotation(bookId, annotation);
+    const result = await window.electron.db.createAnnotation(bookId, annotation);
     await get().loadAnnotationsByBook(bookId);
+    return result;
   },
   updateAnnotation: async (id: string, update: Partial<NewAnnotation>) => {
     const { success, error } = await window.electron.db.updateAnnotation(id, update);

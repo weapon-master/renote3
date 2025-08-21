@@ -4,6 +4,9 @@ import { Annotation, Book } from '../../../types';
 import { ReactReader } from 'react-reader';
 import { AnnotationColor } from '../../../const/annotation-color';
 import './EpubReader.css';
+import { useBookStore } from '@/store/book';
+import { useAnnotationStore } from '@/store/annotation';
+import { useCardStore } from '@/store/card';
 
 interface EpubReaderProps {
   book: Book;
@@ -12,14 +15,16 @@ interface EpubReaderProps {
 }
 
 const EpubReader: React.FC<EpubReaderProps> = ({
-  book,
+  // book,
   onAnnotationClick,
   onAnnotationsChange,
 }) => {
-  const [location, setLocation] = useState<string | number>(
-    book.readingProgress || 0,
-  );
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const book = useBookStore(state => state.currBook);
+  const readingProgress = book.readingProgress || '';
+  // const [location, setLocation] = useState<string | number>(
+  //   book.readingProgress || 0,
+  // );
+  // const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const renditionRef = useRef<any>(null);
   const [pendingSelection, setPendingSelection] = useState<{
     id?: string;
@@ -54,7 +59,13 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     AnnotationColor.HighlightYellow,
   );
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
-
+  const updateReadingProgress = useBookStore((state) => state.updateReadingProgress)
+  const loadAnnotationsByBook = useAnnotationStore(state => state.loadAnnotationsByBook);
+  const createAnnotation = useAnnotationStore(state => state.createAnnotation);
+  const updateAnnotation = useAnnotationStore(state => state.updateAnnotation);
+  const deleteAnnotation = useAnnotationStore(state => state.deleteAnnotation)
+  const annotations = useAnnotationStore(state => state.annotations);
+  const createCard = useCardStore(state => state.createCard);
   const epubUrl = useMemo(() => {
     if (window.electron?.epub?.getLocalFileUrl) {
       return window.electron.epub.getLocalFileUrl(book.filePath);
@@ -63,16 +74,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   }, [book.filePath]);
 
   const handleLocationChange = (epubcfi: string) => {
-    setLocation(epubcfi);
+    updateReadingProgress(book.id, epubcfi)
     console.log('Location changed to:', epubcfi);
-    // Save reading progress to database
-    if (window.electron?.db?.updateReadingProgress) {
-      window.electron.db
-        .updateReadingProgress(book.id, epubcfi)
-        .catch((error: any) => {
-          console.error('Failed to save reading progress:', error);
-        });
-    }
   };
 
   // Navigate to annotation location
@@ -96,7 +99,9 @@ const EpubReader: React.FC<EpubReaderProps> = ({
       }
     }
   };
-
+  useEffect(() => {
+    loadAnnotationsByBook(book.id)
+  }, [book.id]);
   // Expose navigation function to parent component
   useEffect(() => {
     if (onAnnotationClick) {
@@ -104,39 +109,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({
       (window as any).navigateToAnnotation = navigateToAnnotation;
     }
   }, [onAnnotationClick, renditionRef.current]);
-
-  // Load annotations from database
-  useEffect(() => {
-    const loadAnnotations = async () => {
-      try {
-        if (window.electron?.db?.getAnnotationsByBookId) {
-          const loadedAnnotations =
-            await window.electron.db.getAnnotationsByBookId(book.id);
-          console.log('Loaded annotations from database:', loadedAnnotations);
-          setAnnotations(loadedAnnotations);
-
-          // If rendition is already ready, apply highlights immediately
-          // if (renditionRef.current) {
-          //   console.log('Rendition already ready, applying highlights immediately');
-          //   setTimeout(() => {
-          //     applyHighlights(renditionRef.current, loadedAnnotations);
-          //   }, 100);
-          // }
-        }
-      } catch (error) {
-        console.error('Failed to load annotations:', error);
-      }
-    };
-
-    loadAnnotations();
-  }, [book.id]);
-
-  // Notify parent component when annotations change
-  useEffect(() => {
-    if (onAnnotationsChange) {
-      onAnnotationsChange(annotations);
-    }
-  }, [annotations, onAnnotationsChange]);
 
   // When ReactReader gives us the rendition, wire selection handler and render highlights
   const handleRendition = (rendition: any) => {
@@ -537,15 +509,15 @@ const EpubReader: React.FC<EpubReaderProps> = ({
           Math.abs(l - baseL) + Math.abs(t - baseT);
         const baseLA = validA
           ? iframeEl!.getBoundingClientRect().left +
-            rect.left +
-            rect.width / 2 -
-            toolbarWidth / 2
+          rect.left +
+          rect.width / 2 -
+          toolbarWidth / 2
           : Infinity;
         const baseTA = validA
           ? iframeEl!.getBoundingClientRect().top +
-            rect.top -
-            toolbarHeight -
-            padding
+          rect.top -
+          toolbarHeight -
+          padding
           : Infinity;
         const baseLB = rect.left + rect.width / 2 - toolbarWidth / 2;
         const baseTB = rect.top - toolbarHeight - padding;
@@ -581,20 +553,17 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     }
     let next: Annotation[];
     if (pendingSelection.id) {
-      next = annotations.map((a) =>
-        a.id === pendingSelection.id
-          ? {
-              ...a,
-              note: noteDraft.trim(),
-              color: {
-                rgba: selectedColor,
-                category: 'default',
-              },
-              updatedAt: Date.now(),
-            }
-          : a,
-      );
+      // edit
+      await updateAnnotation(book.id, {
+        note: noteDraft.trim(),
+        color: {
+          rgba: selectedColor,
+          category: 'default',
+        },
+        updatedAt: Date.now(),
+      })
     } else {
+      // create
       const newAnn: Annotation = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
         bookId: book.id,
@@ -608,313 +577,271 @@ const EpubReader: React.FC<EpubReaderProps> = ({
         },
         createdAt: Date.now(),
       };
-      next = [...annotations, newAnn];
+      const savedAnnotation = await createAnnotation(book.id, newAnn);
+       const defaultCard = {
+          annotationId: savedAnnotation.id,
+          position: { x: 50 + annotations.length * 200, y: 50 + annotations.length * 150 },
+          width: 200,
+          height: 120,
+        };
+        const savedCard = await createCard(defaultCard);
+        console.log('Creating default card for new annotation:', savedAnnotation.id, savedCard.id);
     }
     // Persist to storage via Electron API
-    try {
-      if (pendingSelection.id) {
-        // Update existing annotation
-        await window.electron?.db?.updateAnnotation?.(pendingSelection.id, {
-          note: noteDraft.trim(),
-          color: {
-            rgba: selectedColor,
-            category: 'default',
-          },
-        });
-        // Update local state after successful database update
-        setAnnotations(next);
-      } else {
-        // Create new annotation
-        const newAnnotation = next[next.length - 1];
-        console.log('Saving new annotation with color:', newAnnotation.color);
-        const savedAnnotation = await window.electron?.db?.createAnnotation?.(book.id, newAnnotation);
-        
-        // Create a default card for the new annotation
-        if (savedAnnotation) {
-          try {
-            const defaultCard = {
-              annotationId: savedAnnotation.id,
-              position: { x: 50 + annotations.length * 200, y: 50 + annotations.length * 150 },
-              width: 200,
-              height: 120,
-            };
-            console.log('Creating default card for new annotation:', savedAnnotation.id);
-            const savedCard = await window.electron?.db?.createCard?.(savedAnnotation.id, defaultCard);
-            console.log('Successfully created card for annotation:', savedAnnotation.id, 'with card ID:', savedCard?.id);
-          } catch (cardError) {
-            console.error('创建注释卡片失败', cardError);
-          }
-        }
-        
-        // Update local state after successful database operations
-        // Use the saved annotation from database instead of the local one
-        if (savedAnnotation) {
-          const updatedAnnotations = [...annotations, savedAnnotation];
-          setAnnotations(updatedAnnotations);
-        } else {
-          setAnnotations(next);
-        }
-      }
-    } catch (e) {
-      console.error('保存批注失败', e);
-    }
-    
-    // Clear UI state
-    setShowNoteModal(false);
-    setPendingSelection(null);
-    setToolbarPosition(null);
-    setHoverToolbar(null);
-  };
+      // Clear UI state
+      setShowNoteModal(false);
+      setPendingSelection(null);
+      setToolbarPosition(null);
+      setHoverToolbar(null);
+    };
 
-  const removeAnnotation = async (id: string) => {
-    const next = annotations.filter((a) => a.id !== id);
-    setAnnotations(next);
-    try {
-      await window.electron?.db?.deleteAnnotation?.(id);
-    } catch (e) {
-      console.error('删除批注失败', e);
-    }
-  };
-
-  // Dismiss toolbar on outside clicks in the main document
-  useEffect(() => {
-    if (!toolbarPosition) return;
-    const onDocMouseDown = (e: MouseEvent) => {
-      const el = toolbarRef.current;
-      if (el && e.target instanceof Node && !el.contains(e.target)) {
-        setToolbarPosition(null);
-        setShowColorPicker(false);
+    const removeAnnotation = async (id: string) => {
+      try {
+        await deleteAnnotation(id);
+      } catch (e) {
+        console.error('删除批注失败', e);
       }
     };
-    document.addEventListener('mousedown', onDocMouseDown, true);
-    return () =>
-      document.removeEventListener('mousedown', onDocMouseDown, true);
-  }, [toolbarPosition]);
 
-  // Dismiss note popup on outside click
-  useEffect(() => {
-    if (!notePopup) return;
-    const onDocMouseDown = () => setNotePopup(null);
-    document.addEventListener('mousedown', onDocMouseDown, true);
-    return () =>
-      document.removeEventListener('mousedown', onDocMouseDown, true);
-  }, [notePopup]);
+    // Dismiss toolbar on outside clicks in the main document
+    useEffect(() => {
+      if (!toolbarPosition) return;
+      const onDocMouseDown = (e: MouseEvent) => {
+        const el = toolbarRef.current;
+        if (el && e.target instanceof Node && !el.contains(e.target)) {
+          setToolbarPosition(null);
+          setShowColorPicker(false);
+        }
+      };
+      document.addEventListener('mousedown', onDocMouseDown, true);
+      return () =>
+        document.removeEventListener('mousedown', onDocMouseDown, true);
+    }, [toolbarPosition]);
 
-  // Dismiss click toolbar on outside click
-  useEffect(() => {
-    if (!clickToolbar) return;
-    const onDocMouseDown = (e: MouseEvent) => {
-      const el = clickToolbarRef.current;
-      if (el && e.target instanceof Node && !el.contains(e.target)) {
-        setClickToolbar(null);
-      }
-    };
-    document.addEventListener('mousedown', onDocMouseDown, true);
-    return () =>
-      document.removeEventListener('mousedown', onDocMouseDown, true);
-  }, [clickToolbar]);
+    // Dismiss note popup on outside click
+    useEffect(() => {
+      if (!notePopup) return;
+      const onDocMouseDown = () => setNotePopup(null);
+      document.addEventListener('mousedown', onDocMouseDown, true);
+      return () =>
+        document.removeEventListener('mousedown', onDocMouseDown, true);
+    }, [notePopup]);
 
-  if (!epubUrl) {
+    // Dismiss click toolbar on outside click
+    useEffect(() => {
+      if (!clickToolbar) return;
+      const onDocMouseDown = (e: MouseEvent) => {
+        const el = clickToolbarRef.current;
+        if (el && e.target instanceof Node && !el.contains(e.target)) {
+          setClickToolbar(null);
+        }
+      };
+      document.addEventListener('mousedown', onDocMouseDown, true);
+      return () =>
+        document.removeEventListener('mousedown', onDocMouseDown, true);
+    }, [clickToolbar]);
+
+    if (!epubUrl) {
+      return (
+        <div className="epub-error">
+          <p>无法生成EPUB读取地址</p>
+          <p>文件路径: {book.filePath}</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="epub-error">
-        <p>无法生成EPUB读取地址</p>
-        <p>文件路径: {book.filePath}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="epub-reader">
-      <ReactReader
-        url={epubUrl}
-        location={location}
-        locationChanged={handleLocationChange}
-        swipeable={false}
-        showToc
-        getRendition={handleRendition}
-      />
-      {toolbarPosition &&
-        pendingSelection &&
-        createPortal(
-          <div
-            className="selection-toolbar"
-            ref={toolbarRef}
-            style={{
-              position: 'fixed',
-              top: toolbarPosition.top,
-              left: toolbarPosition.left,
-              width: 280,
-            }}
-          >
-            <div className="color-picker-container">
+      <div className="epub-reader">
+        <ReactReader
+          url={epubUrl}
+          location={readingProgress}
+          locationChanged={handleLocationChange}
+          swipeable={false}
+          showToc
+          getRendition={handleRendition}
+        />
+        {toolbarPosition &&
+          pendingSelection &&
+          createPortal(
+            <div
+              className="selection-toolbar"
+              ref={toolbarRef}
+              style={{
+                position: 'fixed',
+                top: toolbarPosition.top,
+                left: toolbarPosition.left,
+                width: 280,
+              }}
+            >
+              <div className="color-picker-container">
+                <button
+                  className="color-picker-btn"
+                  style={{ backgroundColor: selectedColor }}
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                />
+                {showColorPicker && (
+                  <div className="color-picker-dropdown">
+                    {Object.entries(AnnotationColor).map(([name, color]) => (
+                      <button
+                        key={name}
+                        className="color-option"
+                        style={{ backgroundColor: color }}
+                        onClick={() => {
+                          setSelectedColor(color);
+                          setShowColorPicker(false);
+                        }}
+                        title={name}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
-                className="color-picker-btn"
-                style={{ backgroundColor: selectedColor }}
-                onClick={() => setShowColorPicker(!showColorPicker)}
-              />
-              {showColorPicker && (
-                <div className="color-picker-dropdown">
+                className="toolbar-btn"
+                onClick={() => {
+                  setShowNoteModal(true);
+                }}
+              >
+                添加批注
+              </button>
+              <button
+                className="toolbar-btn secondary"
+                onClick={() => {
+                  /* explain no-op for now */
+                }}
+              >
+                解释
+              </button>
+            </div>,
+            document.body,
+          )}
+        {clickToolbar &&
+          createPortal(
+            <div
+              className="selection-toolbar"
+              ref={clickToolbarRef}
+              style={{
+                position: 'fixed',
+                top: clickToolbar.top,
+                left: clickToolbar.left,
+                width: 280,
+              }}
+            >
+              <button
+                className="toolbar-btn"
+                onClick={() => {
+                  setPendingSelection({
+                    id: clickToolbar.annotation.id,
+                    cfiRange: clickToolbar.annotation.cfiRange,
+                    text: clickToolbar.annotation.text,
+                  });
+                  setNoteDraft(clickToolbar.annotation.note);
+                  setSelectedColor(
+                    clickToolbar.annotation.color?.rgba ||
+                    AnnotationColor.HighlightYellow,
+                  );
+                  setShowNoteModal(true);
+                  setClickToolbar(null);
+                }}
+              >
+                编辑
+              </button>
+              <button
+                className="toolbar-btn"
+                onClick={() => {
+                  setNotePopup({
+                    top: clickToolbar.top,
+                    left: clickToolbar.left,
+                    annotation: clickToolbar.annotation,
+                  });
+                  setClickToolbar(null);
+                }}
+              >
+                查看
+              </button>
+              <button
+                className="toolbar-btn secondary"
+                onClick={() => {
+                  removeAnnotation(clickToolbar.annotation.id);
+                  setClickToolbar(null);
+                }}
+              >
+                删除
+              </button>
+            </div>,
+            document.body,
+          )}
+        {notePopup &&
+          createPortal(
+            <div
+              className="note-popup"
+              style={{
+                position: 'fixed',
+                top: notePopup.top,
+                left: notePopup.left,
+                width: 280,
+              }}
+            >
+              <div className="note-popup-header">
+                <span>批注</span>
+                <button
+                  className="note-popup-close"
+                  onClick={() => setNotePopup(null)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="note-popup-text">{notePopup.annotation.text}</div>
+              <div className="note-popup-note">{notePopup.annotation.note}</div>
+            </div>,
+            document.body,
+          )}
+        {/* Simple note modal */}
+        {showNoteModal && (
+          <div className="note-modal-backdrop">
+            <div className="note-modal">
+              <h4>{pendingSelection?.id ? '编辑批注' : '添加批注'}</h4>
+              <div className="note-selected-text">{pendingSelection?.text}</div>
+              <div className="note-color-selector">
+                <label>选择颜色:</label>
+                <div className="color-options">
                   {Object.entries(AnnotationColor).map(([name, color]) => (
                     <button
                       key={name}
-                      className="color-option"
+                      className={`color-option ${selectedColor === color ? 'selected' : ''}`}
                       style={{ backgroundColor: color }}
-                      onClick={() => {
-                        setSelectedColor(color);
-                        setShowColorPicker(false);
-                      }}
+                      onClick={() => setSelectedColor(color)}
                       title={name}
                     />
                   ))}
                 </div>
-              )}
-            </div>
-            <button
-              className="toolbar-btn"
-              onClick={() => {
-                setShowNoteModal(true);
-              }}
-            >
-              添加批注
-            </button>
-            <button
-              className="toolbar-btn secondary"
-              onClick={() => {
-                /* explain no-op for now */
-              }}
-            >
-              解释
-            </button>
-          </div>,
-          document.body,
-        )}
-      {clickToolbar &&
-        createPortal(
-          <div
-            className="selection-toolbar"
-            ref={clickToolbarRef}
-            style={{
-              position: 'fixed',
-              top: clickToolbar.top,
-              left: clickToolbar.left,
-              width: 280,
-            }}
-          >
-            <button
-              className="toolbar-btn"
-              onClick={() => {
-                setPendingSelection({
-                  id: clickToolbar.annotation.id,
-                  cfiRange: clickToolbar.annotation.cfiRange,
-                  text: clickToolbar.annotation.text,
-                });
-                setNoteDraft(clickToolbar.annotation.note);
-                setSelectedColor(
-                  clickToolbar.annotation.color?.rgba ||
-                    AnnotationColor.HighlightYellow,
-                );
-                setShowNoteModal(true);
-                setClickToolbar(null);
-              }}
-            >
-              编辑
-            </button>
-            <button
-              className="toolbar-btn"
-              onClick={() => {
-                setNotePopup({
-                  top: clickToolbar.top,
-                  left: clickToolbar.left,
-                  annotation: clickToolbar.annotation,
-                });
-                setClickToolbar(null);
-              }}
-            >
-              查看
-            </button>
-            <button
-              className="toolbar-btn secondary"
-              onClick={() => {
-                removeAnnotation(clickToolbar.annotation.id);
-                setClickToolbar(null);
-              }}
-            >
-              删除
-            </button>
-          </div>,
-          document.body,
-        )}
-      {notePopup &&
-        createPortal(
-          <div
-            className="note-popup"
-            style={{
-              position: 'fixed',
-              top: notePopup.top,
-              left: notePopup.left,
-              width: 280,
-            }}
-          >
-            <div className="note-popup-header">
-              <span>批注</span>
-              <button
-                className="note-popup-close"
-                onClick={() => setNotePopup(null)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="note-popup-text">{notePopup.annotation.text}</div>
-            <div className="note-popup-note">{notePopup.annotation.note}</div>
-          </div>,
-          document.body,
-        )}
-      {/* Simple note modal */}
-      {showNoteModal && (
-        <div className="note-modal-backdrop">
-          <div className="note-modal">
-            <h4>{pendingSelection?.id ? '编辑批注' : '添加批注'}</h4>
-            <div className="note-selected-text">{pendingSelection?.text}</div>
-            <div className="note-color-selector">
-              <label>选择颜色:</label>
-              <div className="color-options">
-                {Object.entries(AnnotationColor).map(([name, color]) => (
-                  <button
-                    key={name}
-                    className={`color-option ${selectedColor === color ? 'selected' : ''}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
-                    title={name}
-                  />
-                ))}
+              </div>
+              <textarea
+                placeholder="输入你的笔记..."
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+              />
+              <div className="note-actions">
+                <button className="nav-btn" onClick={saveAnnotation}>
+                  保存
+                </button>
+                <button
+                  className="nav-btn"
+                  onClick={() => {
+                    setShowNoteModal(false);
+                    setPendingSelection(null);
+                    setToolbarPosition(null);
+                  }}
+                >
+                  取消
+                </button>
               </div>
             </div>
-            <textarea
-              placeholder="输入你的笔记..."
-              value={noteDraft}
-              onChange={(e) => setNoteDraft(e.target.value)}
-            />
-            <div className="note-actions">
-              <button className="nav-btn" onClick={saveAnnotation}>
-                保存
-              </button>
-              <button
-                className="nav-btn"
-                onClick={() => {
-                  setShowNoteModal(false);
-                  setPendingSelection(null);
-                  setToolbarPosition(null);
-                }}
-              >
-                取消
-              </button>
-            </div>
           </div>
-        </div>
-      )}
-      {/* Sidebar notes list removed per request */}
-    </div>
-  );
-};
+        )}
+        {/* Sidebar notes list removed per request */}
+      </div>
+    );
+  };
 
-export default EpubReader;
+  export default EpubReader;

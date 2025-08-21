@@ -15,14 +15,9 @@ const BookShelf: React.FC = () => {
   const updateBook = useBookStore(state => state.updateBook);
   const navigate = useNavigate();
 
-  // 从数据库加载书籍数据
-  const loadBooksFromDatabase = async () => {
-    loadBooks();
-  };
-
   // 组件挂载时加载书籍数据
   useEffect(() => {
-    loadBooksFromDatabase();
+    loadBooks();
   }, []);
 
   // 移除示例书籍的useEffect，因为我们现在从本地存储加载

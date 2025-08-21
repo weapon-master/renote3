@@ -4,14 +4,22 @@ import { Book, Annotation } from '../../types';
 import EpubReader from './components/EpubReader';
 import NotesView from '../../components/NotesView';
 import './Reader.css';
+import { useBookStore } from '@/store/book';
+import { useAnnotationStore } from '@/store/annotation';
 
 const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
-  const [book, setBook] = useState<Book | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const book = useBookStore(state => state.currBook);
+  const isLoading = useBookStore(state => state.loading)
+  const loadBooks = useBookStore(state => state.loadBooks)
+  const savedBooks = useBookStore(state => state.books)
+  const selectBook = useBookStore(state => state.selectBook)
+  const annotations = useAnnotationStore(state => state.annotations)
+  const loadAnnotationsByBook = useAnnotationStore(state => state.loadAnnotationsByBook)
+  // const [book, setBook] = useState<Book | null>(null);
   const [showNotesView, setShowNotesView] = useState(false);
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  // const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [notesViewWidth, setNotesViewWidth] = useState(() => {
     const saved = localStorage.getItem('notes-view-width');
     return saved ? parseInt(saved, 10) : 400;
@@ -20,55 +28,30 @@ const Reader: React.FC = () => {
   const [showHeader, setShowHeader] = useState(false);
 
   useEffect(() => {
+    loadBooks()
+  }, []);
+  useEffect(() => {
+    book?.id && loadAnnotationsByBook(book.id)
+  }, [book])
+
+  useEffect(() => {
     const loadBook = async () => {
       if (!bookId) {
         navigate('/bookshelf');
         return;
       }
-
-      try {
-        setIsLoading(true);
-        const electron = (window as any).electron;
-        if (electron && electron.books) {
-          const savedBooks = await electron.books.load();
-          const foundBook = savedBooks.find((b: Book) => b.id === bookId);
-          if (foundBook) {
-            setBook(foundBook);
-            setAnnotations(foundBook.annotations || []);
-          } else {
-            console.error('未找到指定的书籍');
-            navigate('/bookshelf');
-          }
-        } else {
-          console.error('Electron API不可用');
-          navigate('/bookshelf');
-        }
-      } catch (error) {
-        console.error('加载书籍时出错:', error);
+      const foundBook = savedBooks.find((b: Book) => b.id === bookId);
+      if (foundBook) {
+        selectBook(bookId);
+      } else {
+        console.error('未找到指定的书籍');
         navigate('/bookshelf');
-      } finally {
-        setIsLoading(false);
       }
     };
 
     loadBook();
-  }, [bookId, navigate]);
+  }, [bookId, savedBooks, navigate]);
 
-  // Load annotations from database when book changes
-  useEffect(() => {
-    const loadAnnotations = async () => {
-      if (book && window.electron?.db?.getAnnotationsByBookId) {
-        try {
-          const loadedAnnotations = await window.electron.db.getAnnotationsByBookId(book.id);
-          setAnnotations(loadedAnnotations);
-        } catch (error) {
-          console.error('Failed to load annotations:', error);
-        }
-      }
-    };
-    
-    loadAnnotations();
-  }, [book?.id]);
 
   const handleBack = () => {
     navigate('/bookshelf');
@@ -86,7 +69,7 @@ const Reader: React.FC = () => {
   };
 
   const handleAnnotationsChange = (newAnnotations: Annotation[]) => {
-    setAnnotations(newAnnotations);
+    console.log('update annotations', newAnnotations)
   };
 
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -98,12 +81,12 @@ const Reader: React.FC = () => {
 
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
-    
+
     const containerWidth = window.innerWidth;
     const minWidth = 200;
     const maxWidth = containerWidth * 0.8;
     const newWidth = containerWidth - e.clientX;
-    
+
     if (newWidth >= minWidth && newWidth <= maxWidth) {
       setNotesViewWidth(newWidth);
       localStorage.setItem('notes-view-width', newWidth.toString());
@@ -137,8 +120,8 @@ const Reader: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div 
-        className="page" 
+      <div
+        className="page"
         id="reader"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -156,8 +139,8 @@ const Reader: React.FC = () => {
 
   if (!book) {
     return (
-      <div 
-        className="page" 
+      <div
+        className="page"
         id="reader"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -174,8 +157,8 @@ const Reader: React.FC = () => {
   }
 
   return (
-    <div 
-      className="page" 
+    <div
+      className="page"
       id="reader"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -184,8 +167,8 @@ const Reader: React.FC = () => {
       <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
         <button id="back-btn" onClick={handleBack}>返回书架</button>
         <h1 id="reader-title">{book.title}</h1>
-        <button 
-          id="notes-toggle-btn" 
+        <button
+          id="notes-toggle-btn"
           onClick={handleNotesViewToggle}
           className={showNotesView ? 'active' : ''}
         >
@@ -195,8 +178,8 @@ const Reader: React.FC = () => {
       <div id="reader-content" className={`${showNotesView ? 'with-notes' : ''} ${isResizing ? 'resizing' : ''}`}>
         <div className="reader-main">
           {book.filePath.toLowerCase().endsWith('.epub') ? (
-            <EpubReader 
-              book={book} 
+            <EpubReader
+              book={book}
               onAnnotationClick={handleCardClick}
               onAnnotationsChange={handleAnnotationsChange}
             />
@@ -215,7 +198,7 @@ const Reader: React.FC = () => {
         </div>
         {showNotesView && (
           <>
-            <div 
+            <div
               className="resize-handle"
               onMouseDown={handleResizeStart}
               onDoubleClick={() => {
@@ -225,7 +208,7 @@ const Reader: React.FC = () => {
               style={{ cursor: 'col-resize' }}
               title="Drag to resize, double-click to reset"
             />
-            <NotesView 
+            <NotesView
               annotations={annotations}
               onCardClick={handleCardClick}
               isVisible={showNotesView}

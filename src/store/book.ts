@@ -7,6 +7,7 @@ type BookStore = {
   books: Book[];
   loading: boolean;
   currBook: Book | null;
+  selectBook: (bookId: string) => void;
   loadBooks: () => Promise<void>;
   createBook: (book: NewBook) => Promise<void>;
   importBooks: (books: NewBook[]) => Promise<void>;
