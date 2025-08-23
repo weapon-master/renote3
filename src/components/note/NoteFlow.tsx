@@ -22,6 +22,7 @@ import { useNodesState, useEdgesState } from '@xyflow/react';
 import { useBookStore } from '@/store/book';
 import { useConnectionStore } from '@/store/connection';
 import { useAnnotationStore } from '@/store/annotation';
+import useCanvasCenter from '@/hooks/flow/useCanvasCenter';
 
 const nodeTypes: NodeTypes = {
   noteNode: NoteNode,
@@ -43,9 +44,17 @@ export default function NoteFlow({
   const book = useBookStore(state => state.currBook);
   const updateCard = useAnnotationStore(state => state.updateCard)
   const batchCreateConnections = useConnectionStore(state => state.batchCreateConnections);
+  const deleteConnection = useConnectionStore(state => state.deleteConnection);
+  const updateCanvasCenterPosition = useAnnotationStore(state => state.updateCanvasCenterPosition);
   const [nodes, setNodes, _onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, _onEdgesChange] = useEdgesState(initialEdges);
   const { getIntersectingNodes } = useReactFlow()
+  const getCanvasCenter = useCanvasCenter()
+  const canvasCenter = getCanvasCenter()
+  const {x, y} = canvasCenter;
+  useEffect(() => {
+    updateCanvasCenterPosition({ x, y});
+  }, [x, y]);
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       // console.log('onNodesChange', changes);
@@ -136,6 +145,18 @@ export default function NoteFlow({
     })
 
   }
+
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault(); // prevent default browser menu
+      setEdges((eds) => {
+        const newEdges = eds.filter((e) => e.id !== edge.id)
+        deleteConnection(edge.id);
+        return newEdges
+      });
+    },
+    [setEdges]
+  );
   return (
     <div className="notes-canvas">
       {/* <ReactFlowProvider> */}
@@ -149,6 +170,7 @@ export default function NoteFlow({
           // onDrop = {onDrop}
           onNodeDragStop={onNodeDragStop}
           onNodeDrag={onNodeDrag}
+          onEdgeContextMenu={onEdgeContextMenu}
           fitView
           attributionPosition="bottom-left"
           proOptions={{ hideAttribution: true }}

@@ -3,7 +3,10 @@ import { create } from 'zustand';
 
 type NewAnnotation = Omit<Annotation, 'id'>;
 type NewCard = Omit<Card, 'id'>;
-
+type Position = {
+  x: number,
+  y: number,
+}
 type AnnotationStore = {
   annotations: Annotation[];
   loadAnnotationsByBook: (bookId: string) => Promise<void>;
@@ -18,6 +21,8 @@ type AnnotationStore = {
   deleteAnnotation: (id: string) => void;
   cards: Card[];
   updateCard: (id: string, update: Partial<NewCard>) => Promise<void>;
+  canvasCenterPosition: { x: number, y: number };
+  updateCanvasCenterPosition: (position: Position) => void;
 };
 
 export const useAnnotationStore = create<AnnotationStore>((set, get) => ({
@@ -30,9 +35,10 @@ export const useAnnotationStore = create<AnnotationStore>((set, get) => ({
   },
   createAnnotation: async (bookId: string, annotation: NewAnnotation) => {
     const result = await window.electron.db.createAnnotation(bookId, annotation);
+    const canvasCenterPosition = get().canvasCenterPosition;
     const defaultCard = {
       annotationId: result.id,
-      position: { x: 50, y: 200 },
+      position: canvasCenterPosition,
       width: 200,
       height: 120,
     }
@@ -76,4 +82,8 @@ export const useAnnotationStore = create<AnnotationStore>((set, get) => ({
       ),
     }));
   },
+  canvasCenterPosition: { x: 50, y: 200 },
+  updateCanvasCenterPosition: (position: Position) => {
+    set(() => ({ canvasCenterPosition: position }));
+  }
 }));
