@@ -7,6 +7,7 @@ import './EpubReader.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
 import { useCardStore } from '@/store/card';
+import { Rendition } from 'epubjs';
 
 interface EpubReaderProps {
   book: Book;
@@ -20,7 +21,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   onAnnotationsChange,
 }) => {
   const book = useBookStore(state => state.currBook);
-  const readingProgress = book.readingProgress || '';
+  const readingProgress = book.readingProgress;
   // const [location, setLocation] = useState<string | number>(
   //   book.readingProgress || 0,
   // );
@@ -277,14 +278,22 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     }
   }, [annotations]);
 
-  const applyHighlights = (rendition: any, anns: Annotation[]) => {
+  const applyHighlights = (rendition: Rendition, anns: Annotation[]) => {
     console.log('Applying highlights for', anns.length, 'annotations');
 
     if (!rendition || !rendition.annotations) {
       console.warn('Rendition or annotations not available');
       return;
     }
-
+    const newAnns = anns.filter(ann => {
+      const range = ann.cfiRange;
+      //@ts-ignore
+      return !Object.values(rendition.annotations._annotations).find(item => item.cfiRange === range);
+    })
+    if (!newAnns.length) {
+      return;
+    }
+    anns = newAnns;
     // First, remove all existing highlights to avoid duplicates
     try {
       rendition.annotations.remove('highlight');

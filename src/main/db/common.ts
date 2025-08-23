@@ -50,23 +50,6 @@ export function initDatabase(): void {
       )
     `);
 
-    // Create note connections table
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS note_connections (
-        id TEXT PRIMARY KEY,
-        book_id TEXT NOT NULL,
-        from_annotation_id TEXT NOT NULL,
-        to_annotation_id TEXT NOT NULL,
-        direction TEXT DEFAULT 'none',
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-        FOREIGN KEY (from_annotation_id) REFERENCES annotations(id) ON DELETE CASCADE,
-        FOREIGN KEY (to_annotation_id) REFERENCES annotations(id) ON DELETE CASCADE
-      )
-    `);
-    console.log('note_connections table created/verified');
     
     // Create cards table
     db.exec(`
@@ -84,12 +67,29 @@ export function initDatabase(): void {
     `);
     console.log('cards table created/verified');
     
+      // Create note connections table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS note_connections (
+        id TEXT PRIMARY KEY,
+        book_id TEXT NOT NULL,
+        from_card_id TEXT NOT NULL,
+        to_card_id TEXT NOT NULL,
+        direction TEXT DEFAULT 'none',
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+        FOREIGN KEY (from_card_id) REFERENCES cards(id) ON DELETE CASCADE,
+        FOREIGN KEY (to_card_id) REFERENCES cards(id) ON DELETE CASCADE
+      )
+    `);
+
     // Create indexes for better performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_annotations_book_id ON annotations(book_id);
       CREATE INDEX IF NOT EXISTS idx_books_file_path ON books(file_path);
       CREATE INDEX IF NOT EXISTS idx_note_connections_book_id ON note_connections(book_id);
-      CREATE INDEX IF NOT EXISTS idx_note_connections_annotations ON note_connections(from_annotation_id, to_annotation_id);
+      CREATE INDEX IF NOT EXISTS idx_note_connections_annotations ON note_connections(from_card_id, to_card_id);
       CREATE INDEX IF NOT EXISTS idx_cards_annotation_id ON cards(annotation_id);
     `);
     console.log('Database indexes created/verified');
@@ -174,6 +174,7 @@ export function initDatabase(): void {
     throw error;
   }
 }
+
 
 // Get database instance
 export function getDatabase(): Database.Database {

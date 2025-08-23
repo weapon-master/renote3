@@ -37,7 +37,11 @@ const NotesView: React.FC<NotesViewProps> = ({
   const annotations = useAnnotationStore(state => state.annotations);
   const cards = useCardStore(state => state.cards);
   const loadCardsByAnnotationIds = useCardStore(state => state.loadCardsByAnnotationIds);
+  const loadConnectionsByBookId = useConnectionStore(state => state.loadConnectionsByBookId);
   const connections = useConnectionStore(state => state.connections);
+  useEffect(() => {
+    loadConnectionsByBookId(bookId);
+  }, [bookId])
   useEffect(() => {
     loadCardsByAnnotationIds(annotations.map(ann => ann.id));
   }, [bookId]);

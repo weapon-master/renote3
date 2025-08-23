@@ -5,7 +5,7 @@ export function getNoteConnectionsByBookId(bookId: string): NoteConnection[] {
     const database = getDatabase();
 
     const stmt = database.prepare(`
-        SELECT id, book_id, from_annotation_id, to_annotation_id, description, created_at, updated_at
+        SELECT id, book_id, from_card_id, to_card_id, description, created_at, updated_at
         FROM note_connections
         WHERE book_id = ?
     `);
@@ -13,8 +13,8 @@ export function getNoteConnectionsByBookId(bookId: string): NoteConnection[] {
     return stmt.all(bookId).map((conn: any) => ({
         id: conn.id,
         bookId: conn.book_id,
-        fromCardId: conn.from_annotation_id,
-        toCardId: conn.to_annotation_id,
+        fromCardId: conn.from_card_id,
+        toCardId: conn.to_card_id,
         description: conn.description,
     }));
 }
@@ -23,7 +23,7 @@ export function createNoteConnection(connection: Omit<NoteConnection, 'id'>): No
     const database = getDatabase();
 
     const insertStmt = database.prepare(`
-        INSERT INTO note_connections (id, book_id, from_annotation_id, to_annotation_id, description, created_at, updated_at)
+        INSERT INTO note_connections (id, book_id, from_card_id, to_card_id, description, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -85,7 +85,7 @@ export function batchUpdateNoteConnections(bookId: string, connections: NoteConn
         
         // Insert new connections
         const insertStmt = database.prepare(`
-            INSERT INTO note_connections (id, book_id, from_annotation_id, to_annotation_id, description, created_at, updated_at)
+            INSERT INTO note_connections (id, book_id, from_card_id, to_card_id, description, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         
