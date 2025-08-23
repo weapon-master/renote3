@@ -6,7 +6,6 @@ import { AnnotationColor } from '../../../const/annotation-color';
 import './EpubReader.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
-import { useCardStore } from '@/store/card';
 import { Rendition } from 'epubjs';
 
 interface EpubReaderProps {
@@ -66,7 +65,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   const updateAnnotation = useAnnotationStore(state => state.updateAnnotation);
   const deleteAnnotation = useAnnotationStore(state => state.deleteAnnotation)
   const annotations = useAnnotationStore(state => state.annotations);
-  const createCard = useCardStore(state => state.createCard);
   const epubUrl = useMemo(() => {
     if (window.electron?.epub?.getLocalFileUrl) {
       return window.electron.epub.getLocalFileUrl(book.filePath);
@@ -285,15 +283,15 @@ const EpubReader: React.FC<EpubReaderProps> = ({
       console.warn('Rendition or annotations not available');
       return;
     }
-    const newAnns = anns.filter(ann => {
-      const range = ann.cfiRange;
-      //@ts-ignore
-      return !Object.values(rendition.annotations._annotations).find(item => item.cfiRange === range);
-    })
-    if (!newAnns.length) {
-      return;
-    }
-    anns = newAnns;
+    // const newAnns = anns.filter(ann => {
+    //   const range = ann.cfiRange;
+    //   //@ts-ignore
+    //   return !Object.values(rendition.annotations._annotations).find(item => item.cfiRange === range);
+    // })
+    // if (!newAnns.length) {
+    //   return;
+    // }
+    // anns = newAnns;
     // First, remove all existing highlights to avoid duplicates
     try {
       rendition.annotations.remove('highlight');
@@ -586,15 +584,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
         },
         createdAt: Date.now(),
       };
-      const savedAnnotation = await createAnnotation(book.id, newAnn);
-       const defaultCard = {
-          annotationId: savedAnnotation.id,
-          position: { x: 50 + annotations.length * 200, y: 50 + annotations.length * 150 },
-          width: 200,
-          height: 120,
-        };
-        const savedCard = await createCard(defaultCard);
-        console.log('Creating default card for new annotation:', savedAnnotation.id, savedCard.id);
+      await createAnnotation(book.id, newAnn);
     }
     // Persist to storage via Electron API
       // Clear UI state

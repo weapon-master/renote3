@@ -19,9 +19,9 @@ import {
 import NoteNode from './NoteNode';
 import { NodeTypes } from '@xyflow/react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
-import { useCardStore } from '@/store/card';
 import { useBookStore } from '@/store/book';
 import { useConnectionStore } from '@/store/connection';
+import { useAnnotationStore } from '@/store/annotation';
 
 const nodeTypes: NodeTypes = {
   noteNode: NoteNode,
@@ -41,7 +41,7 @@ export default function NoteFlow({
   onEdgesUpdate,
 }: NoteFlowProps) {
   const book = useBookStore(state => state.currBook);
-  const updateCard = useCardStore(state => state.updateCard)
+  const updateCard = useAnnotationStore(state => state.updateCard)
   const batchCreateConnections = useConnectionStore(state => state.batchCreateConnections);
   const [nodes, setNodes, _onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, _onEdgesChange] = useEdgesState(initialEdges);

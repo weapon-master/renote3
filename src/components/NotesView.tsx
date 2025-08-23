@@ -11,7 +11,6 @@ import { debounce } from 'lodash-es';
 import './NotesView.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
-import { useCardStore } from '@/store/card';
 import { useConnectionStore } from '@/store/connection';
 
 
@@ -35,16 +34,13 @@ const NotesView: React.FC<NotesViewProps> = ({
   const book = useBookStore(state => state.currBook)
   const bookId = book.id
   const annotations = useAnnotationStore(state => state.annotations);
-  const cards = useCardStore(state => state.cards);
-  const loadCardsByAnnotationIds = useCardStore(state => state.loadCardsByAnnotationIds);
+  const cards = useAnnotationStore(state => state.cards);
   const loadConnectionsByBookId = useConnectionStore(state => state.loadConnectionsByBookId);
   const connections = useConnectionStore(state => state.connections);
   useEffect(() => {
     loadConnectionsByBookId(bookId);
   }, [bookId])
-  useEffect(() => {
-    loadCardsByAnnotationIds(annotations.map(ann => ann.id));
-  }, [bookId]);
+
   const initialNodes = useMemo(() => {
     return cards.map(card => {
       const ann = annotations.find(item => item.id === card.annotationId)
