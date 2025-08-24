@@ -81,6 +81,8 @@ app.on('ready', () => {
   registerEpubHandlers();
   // 注册数据库相关的IPC处理器
   registerDatabaseHandlers();
+  // 注册LLM相关的IPC处理器
+  registerLlmHandlers();
   // 注册自定义协议以安全地从本地文件系统提供 EPUB 资源
   try {
     protocol.registerFileProtocol('epub-local', (request, callback) => {
@@ -954,3 +956,21 @@ function registerEpubHandlers() {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+
+// 注册LLM相关的IPC处理器
+function registerLlmHandlers() {
+  // 书籍摘要生成
+  ipcMain.handle('summarize-book', async (event, content: string) => {
+    try {
+      const summarizeBook = (await import('./main/llm/tools/summarizeBook')).default;
+      const summary = await summarizeBook(content);
+      console.log('书籍摘要生成成功');
+      return summary;
+    } catch (error) {
+      console.error('书籍摘要生成失败:', error);
+      throw error;
+    }
+  });
+
+  console.log('LLM IPC处理器已注册');
+}

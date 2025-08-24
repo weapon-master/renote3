@@ -74,6 +74,11 @@ contextBridge.exposeInMainWorld('electron', {
     updateNoteConnection: (id: string, updates: any) => ipcRenderer.invoke('update-note-connection', id, updates),
     deleteNoteConnection: (id: string) => ipcRenderer.invoke('delete-note-connection', id),
     batchUpdateNoteConnections: (bookId: string, connections: any[]) => ipcRenderer.invoke('batch-update-note-connections', bookId, connections)
+  },
+  
+  // LLM API
+  llm: {
+    summarizeBook: (content: string) => ipcRenderer.invoke('summarize-book', content)
   }
 });
 

@@ -65,6 +65,10 @@ declare global {
         deleteNoteConnection: (id: string) => Promise<{ success: boolean; error?: string }>;
         batchUpdateNoteConnections: (bookId: string, connections: NoteConnection[]) => Promise<{ success: boolean; error?: string }>;
       };
+      
+      llm: {
+        summarizeBook: (content: string) => Promise<string>;
+      };
     };
   }
 }

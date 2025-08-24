@@ -7,6 +7,8 @@ import './EpubReader.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
 import { Rendition } from 'epubjs';
+import ChapterSelector from '../../../components/ChapterSelector';
+import DescriptionConfirm from '../../../components/DescriptionConfirm';
 
 interface EpubReaderProps {
   book: Book;
@@ -60,7 +62,16 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     AnnotationColor.HighlightYellow,
   );
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
+  
+  // Description generation states
+  const [showChapterSelector, setShowChapterSelector] = useState<boolean>(false);
+  const [showDescriptionConfirm, setShowDescriptionConfirm] = useState<boolean>(false);
+  const [generatedDescription, setGeneratedDescription] = useState<string>('');
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
+  const [chapters, setChapters] = useState<Array<{index: number; title: string; href: string}>>([]);
+  const [showDescriptionButton, setShowDescriptionButton] = useState<boolean>(false);
   const updateReadingProgress = useBookStore((state) => state.updateReadingProgress)
+  const updateBook = useBookStore((state) => state.updateBook)
   const loadAnnotationsByBook = useAnnotationStore(state => state.loadAnnotationsByBook);
   const createAnnotation = useAnnotationStore(state => state.createAnnotation);
   const updateAnnotation = useAnnotationStore(state => state.updateAnnotation);
@@ -102,6 +113,180 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   useEffect(() => {
     loadAnnotationsByBook(book.id)
   }, [book.id]);
+
+  // Check if book needs description generation
+  useEffect(() => {
+    if (!book.description && bookRef.current && !showChapterSelector && !showDescriptionConfirm) {
+      // Check if user has dismissed the description generation for this book
+      const dismissedKey = `description_dismissed_${book.id}`;
+      const isDismissed = localStorage.getItem(dismissedKey) === 'true';
+      
+      if (!isDismissed) {
+        // Get chapters from table of contents (toc) instead of spine
+        const book = bookRef.current;
+        const chaptersList = [];
+        
+        // @ts-ignore - toc contains the actual chapters with titles
+        const toc = book.navigation?.toc || [];
+        
+        for (let i = 0; i < toc.length; i++) {
+          const item = toc[i];
+          if (item && item.href) {
+            chaptersList.push({
+              index: i,
+              title: item.label || `第${i + 1}章`,
+              href: item.href
+            });
+          }
+        }
+        
+        // If toc is empty, fallback to spine but try to get better titles
+        if (chaptersList.length === 0) {
+          // @ts-ignore - spine.items is the correct way to access spine items
+          const items = book.spine?.items || [];
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item) {
+              // Try to get title from manifest or use a more descriptive name
+              // @ts-ignore - manifest might contain title information
+              const manifestItem = book.manifest?.[item.id];
+              const title = manifestItem?.title || 
+                           (item.id && item.id.toLowerCase().includes('chapter') ? item.id : `第${i + 1}章`);
+              
+              chaptersList.push({
+                index: i,
+                title: title,
+                href: item.href
+              });
+            }
+          }
+        }
+        
+        setChapters(chaptersList);
+        setShowChapterSelector(true);
+      } else {
+        // Show the manual description generation button
+        setShowDescriptionButton(true);
+      }
+    }
+  }, [book.description, bookRef.current, showChapterSelector, showDescriptionConfirm]);
+
+  // Handle chapter selection
+  const handleChapterSelect = async (chapter: {index: number; title: string; href: string}) => {
+    setShowChapterSelector(false);
+    setIsGeneratingDescription(true);
+    setShowDescriptionConfirm(true);
+
+    try {
+      if (bookRef.current) {
+        // Find the spine item that corresponds to the selected chapter
+        const book = bookRef.current;
+        // @ts-ignore - spine.items is the correct way to access spine items
+        const spineItems = book.spine?.items || [];
+        
+        // Find the spine item that matches the chapter href
+        let spineItem = null;
+        let spinIndex = 0
+        for (const item of spineItems) {
+          if (item && item.href === chapter.href) {
+            spineItem = item;
+            spinIndex = spineItems.indexOf(item);
+            break;
+          }
+        }
+        
+        // If not found by href, try by index
+        if (!spineItem && spineItems[chapter.index]) {
+          spineItem = spineItems[chapter.index];
+          spinIndex = chapter.index;
+        }
+        
+        if (spineItem) {
+          const spineSection = book.spine.get(spinIndex);
+          const doc = await spineSection.load(book.load.bind(book));
+          // @ts-ignore
+          const text = doc.innerText;
+          
+          // Call summarizeBook function
+          const summary = await window.electron.llm.summarizeBook(text);
+          setGeneratedDescription(summary);
+        } else {
+          throw new Error('无法找到对应的章节内容');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating description:', error);
+      setGeneratedDescription('生成描述时出现错误，请重试。');
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+
+  // Handle description acceptance
+  const handleAcceptDescription = async () => {
+    try {
+      await updateBook(book.id, { description: generatedDescription });
+      setShowDescriptionConfirm(false);
+      setGeneratedDescription('');
+      setShowDescriptionButton(false); // Hide the button after successful save
+    } catch (error) {
+      console.error('Error saving description:', error);
+    }
+  };
+
+  // Handle description rejection
+  const handleRejectDescription = () => {
+    setShowDescriptionConfirm(false);
+    setGeneratedDescription('');
+    setShowChapterSelector(true);
+  };
+
+  // Handle manual description generation trigger
+  const handleManualDescriptionGeneration = () => {
+    if (bookRef.current) {
+      const book = bookRef.current;
+      const chaptersList = [];
+      
+      // @ts-ignore - toc contains the actual chapters with titles
+      const toc = book.navigation?.toc || [];
+      
+      for (let i = 0; i < toc.length; i++) {
+        const item = toc[i];
+        if (item && item.href) {
+          chaptersList.push({
+            index: i,
+            title: item.label || `第${i + 1}章`,
+            href: item.href
+          });
+        }
+      }
+      
+      // If toc is empty, fallback to spine but try to get better titles
+      if (chaptersList.length === 0) {
+        // @ts-ignore - spine.items is the correct way to access spine items
+        const items = book.spine?.items || [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item) {
+            // Try to get title from manifest or use a more descriptive name
+            // @ts-ignore - manifest might contain title information
+            const manifestItem = book.manifest?.[item.id];
+            const title = manifestItem?.title || 
+                         (item.id && item.id.toLowerCase().includes('chapter') ? item.id : `第${i + 1}章`);
+            
+            chaptersList.push({
+              index: i,
+              title: title,
+              href: item.href
+            });
+          }
+        }
+      }
+      
+      setChapters(chaptersList);
+      setShowChapterSelector(true);
+    }
+  };
   // Expose navigation function to parent component
   useEffect(() => {
     if (onAnnotationClick) {
@@ -110,20 +295,18 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     }
   }, [onAnnotationClick, renditionRef.current]);
 
-  // useEffect(() => {
-  //   if (!book.description && renditionRef.current && bookRef.current) {
-  //     const spineItems = bookRef.current.spine;
-  //     const spineItem = spineItems.get(2);
-  //     (async () => {
-  //       // const htmlContent = await renditionRef.current.book.load(prefaceHref);
-  //       // console.log('htmlContent2', htmlContent);
-  //       const doc = await spineItem.load(bookRef.current.load.bind(bookRef.current))
-  //       // @ts-ignore
-  //       const text = doc.innerText;
-  //       console.log('htmlContent', text);
-  //     })();
-  //   }
-  // }, [book]);
+  useEffect(() => {
+    if (!book.description && renditionRef.current && bookRef.current) {
+      const spineItems = bookRef.current.spine;
+      const spineItem = spineItems.get(2);
+      (async () => {
+        const doc = await spineItem.load(bookRef.current.load.bind(bookRef.current))
+        // @ts-ignore
+        const text = doc.innerText;
+        console.log('htmlContent', text);
+      })();
+    }
+  }, [book]);
 
   // When ReactReader gives us the rendition, wire selection handler and render highlights
   const handleRendition = (rendition: Rendition) => {
@@ -311,7 +494,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     // anns = newAnns;
     // First, remove all existing highlights to avoid duplicates
     try {
-      rendition.annotations.remove('highlight');
+      rendition.annotations.remove('highlight', '');
       console.log('Removed existing highlights');
     } catch (error) {
       console.warn('Failed to remove existing highlights:', error);
@@ -350,8 +533,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({
               margin: '0 1px',
             },
             (e: any) => handleHighlightClick(e, a),
-            '',
-            { fill: a.color?.rgba || AnnotationColor.HighlightYellow },
           );
           console.log(
             'Successfully added highlight (method 1) for annotation:',
@@ -375,9 +556,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 padding: '1px 2px',
                 margin: '0 1px',
               },
-              (e: any) => handleHighlightClick(e, a),
-              '',
-              { fill: a.color?.rgba || AnnotationColor.HighlightYellow },
             );
             console.log(
               'Successfully added highlight (method 2) for annotation:',
@@ -403,8 +581,6 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 margin: '0 1px',
               },
               (e: any) => handleHighlightClick(e, a),
-              '',
-              { fill: a.color?.rgba || AnnotationColor.HighlightYellow },
             );
             console.log(
               'Successfully added highlight (method 3) for annotation:',
@@ -427,6 +603,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     // Debug: Check if highlights are visible
     setTimeout(() => {
       try {
+        // @ts-ignore - manager property exists on rendition
         const iframe = rendition.manager?.container?.querySelector('iframe');
         if (iframe && iframe.contentDocument) {
           const highlights = iframe.contentDocument.querySelectorAll(
@@ -676,6 +853,19 @@ const EpubReader: React.FC<EpubReaderProps> = ({
           showToc
           getRendition={handleRendition}
         />
+        
+        {/* Manual Description Generation Button */}
+        {showDescriptionButton && !book.description && (
+          <div className="description-generation-button-container">
+            <button
+              className="description-generation-button"
+              onClick={handleManualDescriptionGeneration}
+              title="生成书籍描述"
+            >
+              📝 生成描述
+            </button>
+          </div>
+        )}
         {toolbarPosition &&
           pendingSelection &&
           createPortal(
@@ -855,6 +1045,31 @@ const EpubReader: React.FC<EpubReaderProps> = ({
             </div>
           </div>
         )}
+        
+                 {/* Chapter Selector Modal */}
+         <ChapterSelector
+           isOpen={showChapterSelector}
+           chapters={chapters}
+           onSelectChapter={handleChapterSelect}
+           onClose={() => {
+             setShowChapterSelector(false);
+             // Mark as dismissed in localStorage
+             const dismissedKey = `description_dismissed_${book.id}`;
+             localStorage.setItem(dismissedKey, 'true');
+             setShowDescriptionButton(true);
+           }}
+         />
+        
+        {/* Description Confirm Modal */}
+        <DescriptionConfirm
+          isOpen={showDescriptionConfirm}
+          description={generatedDescription}
+          onAccept={handleAcceptDescription}
+          onReject={handleRejectDescription}
+          onClose={() => setShowDescriptionConfirm(false)}
+          isLoading={isGeneratingDescription}
+        />
+        
         {/* Sidebar notes list removed per request */}
       </div>
     );
