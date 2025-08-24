@@ -68,7 +68,7 @@ export default function NoteEdge(props: EdgeProps) {
       handleSave();
     } else if (event.key === 'Escape') {
       setIsEditing(false);
-      // setDescription((data as NoteEdgeData)?.description || '');
+      setDescription((data as NoteEdgeData)?.description || '');
     }
   }, [(data as NoteEdgeData)?.description, handleSave]);
 
