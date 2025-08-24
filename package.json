@@ -40,11 +40,14 @@
     "vite": "^5.4.19"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.72",
+    "@langchain/deepseek": "^0.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
     "@types/react-router-dom": "^5.3.3",
     "@xyflow/react": "^12.8.2",
     "better-sqlite3": "^12.2.0",
+    "dotenv": "^17.2.1",
     "electron-squirrel-startup": "^1.0.1",
     "epub2": "^3.0.2",
     "epubjs": "^0.3.93",

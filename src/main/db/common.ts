@@ -2,13 +2,11 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
-
-const DB_PATH = path.join(app.getPath('userData'), 'books.db');
+export const DB_PATH = path.join(app.getPath('userData'), 'books.db');
 console.log('Database will be created at:', DB_PATH);
 console.log('User data path:', app.getPath('userData'));
 
 export let db: Database.Database | null = null;
-
 // Initialize database
 export function initDatabase(): void {
   try {
@@ -27,6 +25,7 @@ export function initDatabase(): void {
         file_path TEXT NOT NULL UNIQUE,
         author TEXT,
         description TEXT,
+        topic TEXT,
         reading_progress TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

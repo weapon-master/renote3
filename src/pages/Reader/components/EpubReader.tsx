@@ -25,7 +25,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   //   book.readingProgress || 0,
   // );
   // const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const renditionRef = useRef<any>(null);
+  const renditionRef = useRef<Rendition>(null);
+  const bookRef = useRef<Rendition['book']>(null);
   const [pendingSelection, setPendingSelection] = useState<{
     id?: string;
     cfiRange: string;
@@ -109,10 +110,26 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     }
   }, [onAnnotationClick, renditionRef.current]);
 
+  // useEffect(() => {
+  //   if (!book.description && renditionRef.current && bookRef.current) {
+  //     const spineItems = bookRef.current.spine;
+  //     const spineItem = spineItems.get(2);
+  //     (async () => {
+  //       // const htmlContent = await renditionRef.current.book.load(prefaceHref);
+  //       // console.log('htmlContent2', htmlContent);
+  //       const doc = await spineItem.load(bookRef.current.load.bind(bookRef.current))
+  //       // @ts-ignore
+  //       const text = doc.innerText;
+  //       console.log('htmlContent', text);
+  //     })();
+  //   }
+  // }, [book]);
+
   // When ReactReader gives us the rendition, wire selection handler and render highlights
-  const handleRendition = (rendition: any) => {
+  const handleRendition = (rendition: Rendition) => {
     console.log('Rendition ready, setting up highlights');
     renditionRef.current = rendition;
+    bookRef.current = rendition.book;
     // Ensure selection is visually highlighted inside the iframe
     try {
       rendition.themes.default({

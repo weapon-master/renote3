@@ -55,8 +55,8 @@ export function createBook(book: Omit<Book, 'id' | 'annotations'>): Book {
   const database = getDatabase();
   
   const insertStmt = database.prepare(`
-    INSERT INTO books (id, title, cover_path, file_path, author, description, reading_progress)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO books (id, title, cover_path, file_path, author, description, topic, reading_progress)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
   const bookId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${book.filePath}`;
@@ -68,6 +68,7 @@ export function createBook(book: Omit<Book, 'id' | 'annotations'>): Book {
     book.filePath,
     book.author,
     book.description,
+    book.topic,
     book.readingProgress || null
   );
   
@@ -107,6 +108,10 @@ export function updateBook(id: string, updates: Partial<Omit<Book, 'id'>>): bool
   if (updates.description !== undefined) {
     fields.push('description = ?');
     values.push(updates.description);
+  }
+  if (updates.topic !== undefined) {
+    fields.push('topic = ?');
+    values.push(updates.topic);
   }
   if (updates.readingProgress !== undefined) {
     fields.push('reading_progress = ?');

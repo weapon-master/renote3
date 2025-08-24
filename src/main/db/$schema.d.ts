@@ -5,6 +5,7 @@ export interface Book {
     filePath: string;
     author?: string;
     description?: string;
+    topic?: string;
     readingProgress?: string; // CFI string for current reading position
   }
   
