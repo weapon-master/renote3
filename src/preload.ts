@@ -78,7 +78,8 @@ contextBridge.exposeInMainWorld('electron', {
   
   // LLM API
   llm: {
-    summarizeBook: (content: string) => ipcRenderer.invoke('summarize-book', content)
+    summarizeBook: (content: string) => ipcRenderer.invoke('summarize-book', content),
+    explainText: (topic: string, content: string) => ipcRenderer.invoke('explain-text', topic, content)
   }
 });
 

@@ -972,5 +972,18 @@ function registerLlmHandlers() {
     }
   });
 
+  // 文本解释生成
+  ipcMain.handle('explain-text', async (event, topic: string, content: string) => {
+    try {
+      const explain = (await import('./main/llm/tools/explain')).default;
+      const explanation = await explain(topic, content);
+      console.log('文本解释生成成功');
+      return explanation;
+    } catch (error) {
+      console.error('文本解释生成失败:', error);
+      throw error;
+    }
+  });
+
   console.log('LLM IPC处理器已注册');
 }

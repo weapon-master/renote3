@@ -1,0 +1,3 @@
+- refactor EpubReader
+- add explain selected content
+- add translate

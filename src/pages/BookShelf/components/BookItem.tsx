@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Book } from '../types';
+import { Book } from '../../../types';
 import '../components/BookItem.css';
 
 interface BookItemProps {

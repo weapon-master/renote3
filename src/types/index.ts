@@ -68,6 +68,7 @@ declare global {
       
       llm: {
         summarizeBook: (content: string) => Promise<string>;
+        explainText: (topic: string, content: string) => Promise<string>;
       };
     };
   }
