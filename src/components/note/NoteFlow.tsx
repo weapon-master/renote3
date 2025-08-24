@@ -53,6 +53,7 @@ export default function NoteFlow({
   const batchCreateConnections = useConnectionStore(state => state.batchCreateConnections);
   const deleteConnection = useConnectionStore(state => state.deleteConnection);
   const updateConnection = useConnectionStore(state => state.updateConnection);
+  const checkConnectionExists = useConnectionStore(state => state.checkConnectionExists);
   const updateCanvasCenterPosition = useAnnotationStore(state => state.updateCanvasCenterPosition);
   const [nodes, setNodes, _onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, _onEdgesChange] = useEdgesState(initialEdges);
@@ -125,7 +126,7 @@ export default function NoteFlow({
   }, [initialEdges, setEdges]);
 
   const onNodeDrag = (e: React.MouseEvent<Element, MouseEvent>, n: Node) => {
-     const intersections = getIntersectingNodes(n).map(n => n.id);
+     const intersections = getIntersectingNodes(n).map(n => n.id).filter(id => !checkConnectionExists(id, n.id));
      setNodes(ns => 
       ns.map(n => ({
         ...n,
@@ -143,6 +144,9 @@ export default function NoteFlow({
     
     // 创建边缘
     intersections.forEach((sourceNode) => {
+      if (checkConnectionExists(sourceNode.id, n.id)) {
+        return;
+      }
       const newEdge: Edge = {
         id: `${sourceNode.id}-${n.id}`,
         source: sourceNode.id,
@@ -160,7 +164,7 @@ export default function NoteFlow({
       fromCardId: srcNode.id,
       toCardId: n.id,
       description: '',
-    }))
+    })).filter(c => !checkConnectionExists(c.fromCardId, c.toCardId));
     if (!newConnections.length) {
       return;
     }

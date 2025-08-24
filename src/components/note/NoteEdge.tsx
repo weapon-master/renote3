@@ -25,10 +25,10 @@ export default function NoteEdge(props: EdgeProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 当外部数据更新时，同步本地状态
-  useEffect(() => {
-    setDescription((data as NoteEdgeData)?.description || '');
-  }, [(data as NoteEdgeData)?.description]);
-
+  // useEffect(() => {
+  //   setDescription((data as NoteEdgeData)?.description || '');
+  // }, [(data as NoteEdgeData)?.description]);
+  console.log('description', description)
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -48,18 +48,7 @@ export default function NoteEdge(props: EdgeProps) {
     setDescription(event.target.value);
   }, []);
 
-  const handleInputKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      handleSave();
-    } else if (event.key === 'Escape') {
-      setIsEditing(false);
-      setDescription((data as NoteEdgeData)?.description || '');
-    }
-  }, [(data as NoteEdgeData)?.description]);
 
-  const handleInputBlur = useCallback(() => {
-    handleSave();
-  }, []);
 
   const handleSave = useCallback(() => {
     setIsEditing(false);
@@ -73,6 +62,19 @@ export default function NoteEdge(props: EdgeProps) {
       window.dispatchEvent(customEvent);
     }
   }, [id, description, (data as NoteEdgeData)?.description]);
+
+  const handleInputKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleSave();
+    } else if (event.key === 'Escape') {
+      setIsEditing(false);
+      // setDescription((data as NoteEdgeData)?.description || '');
+    }
+  }, [(data as NoteEdgeData)?.description, handleSave]);
+
+  const handleInputBlur = useCallback(() => {
+    handleSave();
+  }, [handleSave]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

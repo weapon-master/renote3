@@ -72,4 +72,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
       connections: state.connections.filter((item) => item.id !== id),
     }));
   },
+  checkConnectionExists: (fromCardId: string, toCardId: string) => {
+    return get().connections.some((item) => item.fromCardId === fromCardId && item.toCardId === toCardId);
+  },
 }));
