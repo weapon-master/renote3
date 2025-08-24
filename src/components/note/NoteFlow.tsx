@@ -15,17 +15,24 @@ import {
   applyEdgeChanges,
   EdgeChange,
   useReactFlow,
+  EdgeTypes,
 } from '@xyflow/react';
 import NoteNode from './NoteNode';
+import NoteEdge from './NoteEdge';
 import { NodeTypes } from '@xyflow/react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
 import { useBookStore } from '@/store/book';
 import { useConnectionStore } from '@/store/connection';
 import { useAnnotationStore } from '@/store/annotation';
 import useCanvasCenter from '@/hooks/flow/useCanvasCenter';
+import { NoteConnection } from '@/main/db/$schema';
 
 const nodeTypes: NodeTypes = {
   noteNode: NoteNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  noteEdge: NoteEdge,
 };
 
 interface NoteFlowProps {
@@ -45,6 +52,7 @@ export default function NoteFlow({
   const updateCard = useAnnotationStore(state => state.updateCard)
   const batchCreateConnections = useConnectionStore(state => state.batchCreateConnections);
   const deleteConnection = useConnectionStore(state => state.deleteConnection);
+  const updateConnection = useConnectionStore(state => state.updateConnection);
   const updateCanvasCenterPosition = useAnnotationStore(state => state.updateCanvasCenterPosition);
   const [nodes, setNodes, _onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, _onEdgesChange] = useEdgesState(initialEdges);
@@ -85,7 +93,12 @@ export default function NoteFlow({
   const onConnect: OnConnect = useCallback(
     (connection) =>
       setEdges((currentEdges) => {
-        const newEdges = addEdge(connection, currentEdges);
+        const newEdge = {
+          ...connection,
+          type: 'noteEdge',
+          data: { description: '' }
+        };
+        const newEdges = addEdge(newEdge, currentEdges);
         // 立即触发保存回调
         onEdgesUpdate?.(newEdges);
         return newEdges;
@@ -127,23 +140,31 @@ export default function NoteFlow({
   const onNodeDragStop = (e: React.MouseEvent<Element, MouseEvent>, n: Node) => {
     updateCard(n.id, { position: n.position })
     const intersections = getIntersectingNodes(n)
+    
+    // 创建边缘
     intersections.forEach((sourceNode) => {
-      const newEdge = {
+      const newEdge: Edge = {
         id: `${sourceNode.id}-${n.id}`,
         source: sourceNode.id,
         target: n.id,
+        type: 'noteEdge',
+        data: { description: '' }
       }
       setEdges(eds => addEdge(newEdge, eds))
-      const newConnections = intersections.map(srcNode => ({
-        id: `${srcNode.id}-${n.id}`,
-        bookId: book.id,
-        fromCardId: srcNode.id,
-        toCardId: n.id,
-        description: '',
-      }))
-      batchCreateConnections(book.id, newConnections)
     })
-
+    
+    // 创建连接记录
+    const newConnections: NoteConnection[] = intersections.map(srcNode => ({
+      id: `${srcNode.id}-${n.id}`,
+      bookId: book.id,
+      fromCardId: srcNode.id,
+      toCardId: n.id,
+      description: '',
+    }))
+    if (!newConnections.length) {
+      return;
+    }
+    batchCreateConnections(book.id, newConnections)
   }
 
   const onEdgeContextMenu = useCallback(
@@ -157,6 +178,29 @@ export default function NoteFlow({
     },
     [setEdges]
   );
+
+  // 监听边缘描述更新事件
+  useEffect(() => {
+    const handleEdgeDescriptionUpdate = (event: CustomEvent) => {
+      const { edgeId, description } = event.detail;
+      updateConnection(edgeId, { description });
+      
+      // 更新本地边缘状态
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === edgeId
+            ? { ...edge, data: { ...edge.data, description } }
+            : edge
+        )
+      );
+    };
+
+    window.addEventListener('edge-description-update', handleEdgeDescriptionUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('edge-description-update', handleEdgeDescriptionUpdate as EventListener);
+    };
+  }, [setEdges, updateConnection]);
   return (
     <div className="notes-canvas">
       {/* <ReactFlowProvider> */}
@@ -167,6 +211,7 @@ export default function NoteFlow({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           // onDrop = {onDrop}
           onNodeDragStop={onNodeDragStop}
           onNodeDrag={onNodeDrag}

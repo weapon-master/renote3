@@ -33,13 +33,17 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     // loadConnectionsByBookId(bookId);
   },
   batchCreateConnections: async (bookId: string, connections: Connection[]) => {
-    const { success, error } = await window.electron.db.batchUpdateNoteConnections(bookId, connections);
-    console.error({
-      success,
-      error,
-      bookId,
-      connections,
-    })
+    const { success, error } =
+      await window.electron.db.batchUpdateNoteConnections(bookId, connections);
+    if (!success) {
+      console.error({
+        success,
+        error,
+        bookId,
+        connections,
+      });
+      return;
+    }
     set((state) => ({ connections: [...state.connections, ...connections] }));
   },
   updateConnection: async (id: string, connection: Partial<NewConnection>) => {
