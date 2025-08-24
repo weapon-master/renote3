@@ -17,6 +17,7 @@ type ConnectionStore = {
     connection: Partial<NewConnection>,
   ) => Promise<void>;
   deleteConnection: (id: string) => Promise<void>;
+  checkConnectionExists: (fromCardId: string, toCardId: string) => boolean;
 };
 
 export const useConnectionStore = create<ConnectionStore>((set, get) => ({
