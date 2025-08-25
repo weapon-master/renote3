@@ -94,7 +94,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     updateReadingProgress(book.id, epubcfi)
     console.log('Location changed to:', epubcfi);
   };
-
+  console.log('bookRef', bookRef.current);
   // Navigate to annotation location
   const navigateToAnnotation = (annotation: Annotation) => {
     if (renditionRef.current) {

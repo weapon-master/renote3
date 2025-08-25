@@ -1,3 +1,4 @@
 - refactor EpubReader
+- fix connections bug，一个卡片连接两个卡片，只有一个连接
 - add explain selected content
 - add translate

@@ -39,8 +39,8 @@ export const useAnnotationStore = create<AnnotationStore>((set, get) => ({
     const defaultCard = {
       annotationId: result.id,
       position: canvasCenterPosition,
-      width: 200,
-      height: 120,
+      width: 300,
+      // height: 'auto',
     }
     await window.electron.db.createCard(result.id, defaultCard);
     await get().loadAnnotationsByBook(bookId);

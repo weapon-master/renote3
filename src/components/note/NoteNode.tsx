@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Annotation } from "@/types";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 import { AnnotationColor } from "@/const/annotation-color";
-
+import './NoteNode.css'
 
 
 const NoteNode: React.FC<{
@@ -16,10 +16,15 @@ const NoteNode: React.FC<{
     const { annotation, onCardClick } = data;
   
     const annotationColor = annotation.color?.rgba || AnnotationColor.HighlightYellow;
-  
+    const ref = useRef<HTMLDivElement>(null);
+    const updateNodeInternals = useUpdateNodeInternals();
+    useEffect(() => {
+      updateNodeInternals(id);
+    }, [id, updateNodeInternals]);
     return (
-      <div style={{
+      <div ref={ref} style={{
         backgroundColor: data.highlight ? annotationColor : '',
+        height: 'auto',
       }}>
         <div 
           className="node-header"

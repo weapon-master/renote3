@@ -53,8 +53,8 @@ const NotesView: React.FC<NotesViewProps> = ({
           onCardClick,
         },
         style: {
-          width: card?.width || 200,
-          height: card?.height || 120,
+          width: card?.width || 300,
+          height: card?.height || 'auto',
         },
       }
     })

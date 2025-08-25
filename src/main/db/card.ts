@@ -39,8 +39,8 @@ export function createCard(annotationId: string, card: Omit<Card, 'id'>): Card {
         annotationId, 
         card.position?.x || 0, 
         card.position?.y || 0, 
-        card.width || 200, 
-        card.height || 120,
+        card.width, 
+        card.height,
         Date.now(),
         Date.now()
     );
@@ -66,8 +66,8 @@ export function updateCard(id: string, updates: Partial<Pick<Card, 'position' | 
     const result = stmt.run(
         updates.position?.x || 0,
         updates.position?.y || 0,
-        updates.width || 200,
-        updates.height || 120,
+        updates.width,
+        updates.height,
         Date.now(),
         id
     );
@@ -110,8 +110,8 @@ export function batchUpdateCards(cards: Card[]): { success: boolean; error?: str
                         const result = updateStmt.run(
                             card.position?.x || 0,
                             card.position?.y || 0,
-                            card.width || 200,
-                            card.height || 120,
+                            card.width,
+                            card.height,
                             Date.now(),
                             card.annotationId
                         );
@@ -123,8 +123,8 @@ export function batchUpdateCards(cards: Card[]): { success: boolean; error?: str
                             card.annotationId,
                             card.position?.x || 0,
                             card.position?.y || 0,
-                            card.width || 200,
-                            card.height || 120,
+                            card.width,
+                            card.height,
                             Date.now(),
                             Date.now()
                         );
