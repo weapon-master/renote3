@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookItem from './components/BookItem';
 import { Book } from '../../types';
-import './BookShelf.css';
 import { useBookStore } from '@/store/book';
 
 const BookShelf: React.FC = () => {
@@ -95,30 +94,48 @@ const BookShelf: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page" id="book-shelf">
-        <header>
-          <h1>书架</h1>
-          <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
+      <div className="flex-1 flex flex-col p-5 min-h-0 overflow-hidden" id="book-shelf">
+        <header className="flex justify-between items-center mb-5 pb-2.5 border-b border-gray-300">
+          <h1 className="m-0 text-2xl">书架</h1>
+          <button 
+            className="bg-green-500 border-none text-white py-2.5 px-5 text-center no-underline inline-block text-base m-1 cursor-pointer rounded hover:bg-green-600"
+            id="import-btn" 
+            onClick={handleImportBooks}
+          >
+            导入书籍
+          </button>
         </header>
-        <div className="loading">正在加载书籍...</div>
+        <div className="flex justify-center items-center h-50 text-lg text-gray-600">正在加载书籍...</div>
       </div>
     );
   }
 
   return (
-    <div className="page" id="book-shelf">
-      <header>
-        <h1>书架</h1>
-        <div className="header-buttons">
-          <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
-          <button id="settings-btn" onClick={() => navigate('/settings')}>设置</button>
+    <div className="flex-1 flex flex-col p-5 min-h-0 overflow-hidden" id="book-shelf">
+      <header className="flex justify-between items-center mb-5 pb-2.5 border-b border-gray-300">
+        <h1 className="m-0 text-2xl">书架</h1>
+        <div className="flex gap-2.5">
+          <button 
+            className="bg-green-500 border-none text-white py-2.5 px-5 text-center no-underline inline-block text-base m-0 cursor-pointer rounded hover:bg-green-600"
+            id="import-btn" 
+            onClick={handleImportBooks}
+          >
+            导入书籍
+          </button>
+          <button 
+            className="bg-gray-500 border-none text-white py-2.5 px-5 text-center no-underline inline-block text-base m-0 cursor-pointer rounded hover:bg-gray-600"
+            id="settings-btn" 
+            onClick={() => navigate('/settings')}
+          >
+            设置
+          </button>
         </div>
       </header>
       
-      <div id="books-container">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-5 py-5 content-start justify-center min-h-fit overflow-y-auto max-w-full" id="books-container">
         {books.length === 0 ? (
-          <div className="empty-state">
-            <p>书架还是空的，点击"导入书籍"开始添加你的第一本书吧！</p>
+          <div className="flex flex-col justify-center items-center h-75 text-center text-gray-600">
+            <p className="text-base m-0 leading-relaxed">书架还是空的，点击"导入书籍"开始添加你的第一本书吧！</p>
           </div>
         ) : (
           books.map((book, index) => (

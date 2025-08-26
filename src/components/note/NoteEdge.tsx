@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, EdgeProps, Edge } from '@xyflow/react';
-import './NoteEdge.css';
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, EdgeProps } from '@xyflow/react';
+
 
 interface NoteEdgeData {
   description?: string;
@@ -88,7 +88,9 @@ export default function NoteEdge(props: EdgeProps) {
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
       <EdgeLabelRenderer>
         <div
-          className={`note-edge-label ${isEditing ? 'editing' : ''}`}
+          className={`absolute text-xs pointer-events-all cursor-pointer bg-white p-0.5 px-1.5 rounded border border-gray-300 min-w-5 text-center select-none shadow-sm transition-all duration-200 hover:bg-gray-50 hover:border-blue-500 hover:shadow-md ${
+            isEditing ? 'bg-white border-blue-500 shadow-[0_0_0_2px_rgba(0,123,255,0.25)]' : ''
+          }`}
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             opacity: description || isEditing ? 1 : 0.3, // 没有描述时降低透明度
@@ -103,11 +105,11 @@ export default function NoteEdge(props: EdgeProps) {
               onChange={handleInputChange}
               onKeyDown={handleInputKeyDown}
               onBlur={handleInputBlur}
-              className="note-edge-input"
+              className="border-none outline-none text-xs w-full min-w-15 text-center bg-transparent"
               placeholder="输入描述..."
             />
           ) : (
-            <span className={`note-edge-text ${!description ? 'empty' : ''}`}>
+            <span className={`${!description ? 'text-gray-400 italic' : 'text-gray-800'}`}>
               {description || '双击编辑'}
             </span>
           )}

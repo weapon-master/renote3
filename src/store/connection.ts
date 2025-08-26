@@ -8,10 +8,10 @@ type ConnectionStore = {
   bookId: string;
   loadConnectionsByBookId: (bookId: string) => Promise<void>;
   createConnection: (connection: NewConnection) => Promise<Connection>;
-  batchCreateConnections: (
-    bookId: string,
-    connections: Connection[],
-  ) => Promise<void>;
+  // batchCreateConnections: (
+  //   bookId: string,
+  //   connections: Connection[],
+  // ) => Promise<void>;
   updateConnection: (
     id: string,
     connection: Partial<NewConnection>,
@@ -33,20 +33,20 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     set((state) => ({ connections: [...state.connections, newConn] }));
     return newConn;
   },
-  batchCreateConnections: async (bookId: string, connections: Connection[]) => {
-    const { success, error } =
-      await window.electron.db.batchUpdateNoteConnections(bookId, connections);
-    if (!success) {
-      console.error({
-        success,
-        error,
-        bookId,
-        connections,
-      });
-      return;
-    }
-    set((state) => ({ connections: [...state.connections, ...connections] }));
-  },
+  // batchCreateConnections: async (bookId: string, connections: Connection[]) => {
+  //   const { success, error } =
+  //     await window.electron.db.batchUpdateNoteConnections(bookId, connections);
+  //   if (!success) {
+  //     console.error({
+  //       success,
+  //       error,
+  //       bookId,
+  //       connections,
+  //     });
+  //     return;
+  //   }
+  //   set((state) => ({ connections: [...state.connections, ...connections] }));
+  // },
   updateConnection: async (id: string, connection: Partial<NewConnection>) => {
     const { success, error } = await window.electron.db.updateNoteConnection(
       id,

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Book, Annotation } from '../../types';
 import EpubReader from './components/EpubReader';
 import NotesView from '../../components/NotesView';
-import './Reader.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
 
@@ -74,6 +73,8 @@ const Reader: React.FC = () => {
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    console.log('Resize started');
     setIsResizing(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
@@ -82,10 +83,27 @@ const Reader: React.FC = () => {
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
 
-    const containerWidth = window.innerWidth;
+    // 获取容器的位置信息
+    const container = document.getElementById('reader-content');
+    if (!container) return;
+    
+    const containerRect = container.getBoundingClientRect();
+    const containerLeft = containerRect.left;
+    const containerWidth = containerRect.width;
+    
+    // 计算NotesView的新宽度
+    const newWidth = containerLeft + containerWidth - e.clientX;
     const minWidth = 200;
     const maxWidth = containerWidth * 0.8;
-    const newWidth = containerWidth - e.clientX;
+
+    console.log('Resize move:', { 
+      clientX: e.clientX, 
+      containerLeft, 
+      containerWidth, 
+      newWidth, 
+      minWidth, 
+      maxWidth 
+    });
 
     if (newWidth >= minWidth && newWidth <= maxWidth) {
       setNotesViewWidth(newWidth);
@@ -121,16 +139,24 @@ const Reader: React.FC = () => {
   if (isLoading) {
     return (
       <div
-        className="page"
+        className="flex-1 flex flex-col p-5 min-h-0 overflow-hidden relative"
         id="reader"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
-          <button id="back-btn" onClick={handleBack}>返回书架</button>
-          <h1>加载中...</h1>
+        <header className={`flex items-center gap-4 p-4 bg-white border-b border-gray-300 flex-shrink-0 absolute top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out shadow-lg ${
+          showHeader ? 'translate-y-0' : '-translate-y-full'
+        }`}>
+          <button 
+            className="bg-blue-500 border-none text-white py-2.5 px-5 text-center no-underline inline-block text-base m-1 cursor-pointer rounded hover:bg-blue-600"
+            id="back-btn" 
+            onClick={handleBack}
+          >
+            返回书架
+          </button>
+          <h1 className="m-0 text-2xl">加载中...</h1>
         </header>
-        <div id="reader-content">
+        <div className="flex-1 bg-white rounded-lg p-5 shadow-md overflow-y-auto flex flex-col mt-0 transition-mt duration-300 ease-in-out" id="reader-content">
           <p>正在加载书籍...</p>
         </div>
       </div>
@@ -140,16 +166,24 @@ const Reader: React.FC = () => {
   if (!book) {
     return (
       <div
-        className="page"
+        className="flex-1 flex flex-col p-5 min-h-0 overflow-hidden relative"
         id="reader"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
-          <button id="back-btn" onClick={handleBack}>返回书架</button>
-          <h1>书籍阅读器</h1>
+        <header className={`flex items-center gap-4 p-4 bg-white border-b border-gray-300 flex-shrink-0 absolute top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out shadow-lg ${
+          showHeader ? 'translate-y-0' : '-translate-y-full'
+        }`}>
+          <button 
+            className="bg-blue-500 border-none text-white py-2.5 px-5 text-center no-underline inline-block text-base m-1 cursor-pointer rounded hover:bg-blue-600"
+            id="back-btn" 
+            onClick={handleBack}
+          >
+            返回书架
+          </button>
+          <h1 className="m-0 text-2xl">书籍阅读器</h1>
         </header>
-        <div id="reader-content">
+        <div className="flex-1 bg-white rounded-lg p-5 shadow-md overflow-y-auto flex flex-col mt-0 transition-mt duration-300 ease-in-out" id="reader-content">
           <p>未找到书籍。</p>
         </div>
       </div>
@@ -158,25 +192,37 @@ const Reader: React.FC = () => {
 
   return (
     <div
-      className="page"
+      className="flex-1 flex flex-col p-5 min-h-0 overflow-hidden relative before:content-[''] before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:w-15 before:h-1 before:bg-black before:bg-opacity-10 before:rounded-b before:z-40 before:opacity-0 before:transition-opacity before:duration-300 before:ease-in-out hover:before:opacity-100"
       id="reader"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleMouseLeave}
     >
-      <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
-        <button id="back-btn" onClick={handleBack}>返回书架</button>
-        <h1 id="reader-title">{book.title}</h1>
+      <header className={`flex items-center gap-4 p-4 bg-white border-b border-gray-300 flex-shrink-0 absolute top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out shadow-lg ${
+        showHeader ? 'translate-y-0' : '-translate-y-full'
+      }`}>
+        <button 
+          className="bg-blue-500 border-none text-white py-2.5 px-5 text-center no-underline inline-block text-base m-1 cursor-pointer rounded hover:bg-blue-600"
+          id="back-btn" 
+          onClick={handleBack}
+        >
+          返回书架
+        </button>
+        <h1 className="m-0 text-2xl" id="reader-title">{book.title}</h1>
         <button
+          className={`ml-auto px-4 py-2 bg-blue-500 text-white border-none rounded cursor-pointer text-sm transition-colors hover:bg-blue-600 ${
+            showNotesView ? 'bg-green-500 hover:bg-green-600' : ''
+          }`}
           id="notes-toggle-btn"
           onClick={handleNotesViewToggle}
-          className={showNotesView ? 'active' : ''}
         >
           {showNotesView ? '📝 隐藏笔记' : '📝 显示笔记'}
         </button>
       </header>
-      <div id="reader-content" className={`${showNotesView ? 'with-notes' : ''} ${isResizing ? 'resizing' : ''}`}>
-        <div className="reader-main">
+      <div className={`flex-1 bg-white rounded-lg shadow-md overflow-hidden flex mt-0 transition-all duration-300 ease-in-out ${
+        showNotesView ? 'flex-row p-0 gap-0' : 'flex-col'
+      } ${isResizing ? 'select-none' : ''}`} id="reader-content">
+        <div className="flex-1 overflow-hidden h-full">
           {book.filePath.toLowerCase().endsWith('.epub') ? (
             <EpubReader
               book={book}
@@ -184,13 +230,13 @@ const Reader: React.FC = () => {
               onAnnotationsChange={handleAnnotationsChange}
             />
           ) : (
-            <div className="unsupported-format">
-              <p>📖 书籍 "{book.title}" 的内容将显示在这里。</p>
-              <p>文件路径: {book.filePath}</p>
-              <p className="format-info">
+            <div className="text-center py-10 px-5 bg-gray-50 rounded-lg m-5">
+              <p className="my-2.5 text-gray-700">📖 书籍 "{book.title}" 的内容将显示在这里。</p>
+              <p className="my-2.5 text-gray-700">文件路径: {book.filePath}</p>
+              <p className="font-bold text-gray-600 font-mono bg-gray-200 py-2 px-4 rounded inline-block">
                 当前文件格式: {book.filePath.split('.').pop()?.toUpperCase()}
               </p>
-              <p className="support-info">
+              <p className="text-gray-600 italic max-w-lg mx-auto my-5 leading-relaxed">
                 目前支持 EPUB 格式的阅读。其他格式将在后续版本中支持。
               </p>
             </div>
@@ -199,15 +245,18 @@ const Reader: React.FC = () => {
         {showNotesView && (
           <>
             <div
-              className="resize-handle"
+              className="w-2 bg-gray-300 cursor-col-resize relative flex-shrink-0 transition-all duration-200 hover:bg-blue-500 hover:w-3 active:bg-blue-600 group"
               onMouseDown={handleResizeStart}
               onDoubleClick={() => {
                 setNotesViewWidth(400);
                 localStorage.setItem('notes-view-width', '400');
               }}
-              style={{ cursor: 'col-resize' }}
-              title="Drag to resize, double-click to reset"
-            />
+              title="拖拽调整大小，双击重置"
+            >
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-0.5 h-8 bg-gray-400 group-hover:bg-white rounded-full opacity-60 group-hover:opacity-100"></div>
+              </div>
+            </div>
             <NotesView
               annotations={annotations}
               onCardClick={handleCardClick}

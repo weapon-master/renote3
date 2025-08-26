@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Annotation } from "@/types";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 import { AnnotationColor } from "@/const/annotation-color";
-import './NoteNode.css'
+
 
 
 const NoteNode: React.FC<{
@@ -27,22 +27,22 @@ const NoteNode: React.FC<{
         height: 'auto',
       }}>
         <div 
-          className="node-header"
+          className="flex justify-between items-center p-2 px-3 text-xs"
           style={{ 
             backgroundColor: annotationColor,
             borderBottom: `2px solid ${annotationColor}`
           }}
         >
-          <span className="node-title">Note</span>
-          <span className="node-date">
+          <span className="font-semibold text-gray-700">Note</span>
+          <span className="text-gray-500 text-xs">
             {new Date(annotation.createdAt).toLocaleDateString()}
           </span>
         </div>
-        <div className="node-content" onClick={() => onCardClick(annotation)}>
-          <div className="selected-text">
+        <div className="p-3 cursor-pointer hover:bg-gray-50" onClick={() => onCardClick(annotation)}>
+          <div className="text-xs text-gray-500 italic mb-2 leading-relaxed">
             "{annotation.text.substring(0, 50)}..."
           </div>
-          <div className="note-text">
+          <div className="text-sm text-gray-800 leading-relaxed">
             {annotation.note}
           </div>
         </div>

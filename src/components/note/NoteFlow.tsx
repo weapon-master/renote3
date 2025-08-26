@@ -231,7 +231,7 @@ export default function NoteFlow({
     };
   }, [setEdges, updateConnection]);
   return (
-    <div className="notes-canvas">
+    <div className="w-full h-full">
       {/* <ReactFlowProvider> */}
       <ReactFlow
         nodes={nodes}

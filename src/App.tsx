@@ -4,13 +4,12 @@ import Navigation from './components/Navigation';
 import BookShelf from './pages/BookShelf';
 import Reader from './pages/Reader';
 import Settings from './pages/Settings';
-import './App.css';
 
 const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="app">
+      <div className="flex flex-col h-screen font-sans m-0 p-0 bg-gray-100">
         <Navigation />
         <Routes>
           <Route path="/" element={<Navigate to="/bookshelf" replace />} />

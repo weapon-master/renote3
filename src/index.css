@@ -1,5 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
   padding: 0;
   background-color: #f5f5f5;
+}
+
+/* ReactReader 样式修复 */
+.__react-reader__ {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.__react-reader__ > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.__react-reader__ iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
+/* EPUB 内容样式 */
+.epub-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.epub-view {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.epub-view iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
 }

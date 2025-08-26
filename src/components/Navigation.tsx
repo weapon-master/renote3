@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import '../components/Navigation.css';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -11,22 +10,33 @@ const Navigation: React.FC = () => {
   };
 
   return (
-    <nav className="navigation">
-      <div className="nav-container">
-        <div className="nav-brand" onClick={() => navigate('/bookshelf')}>
-          <span className="brand-icon">📚</span>
-          <span className="brand-text">Renote3</span>
+    <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-5 flex justify-between items-center h-15">
+        <div 
+          className="flex items-center cursor-pointer transition-transform hover:scale-105"
+          onClick={() => navigate('/bookshelf')}
+        >
+          <span className="text-2xl mr-2.5">📚</span>
+          <span className="text-xl font-bold text-gray-800">Renote3</span>
         </div>
         
-        <div className="nav-links">
+        <div className="flex gap-2.5">
           <button 
-            className={`nav-link ${isActive('/bookshelf') ? 'active' : ''}`}
+            className={`px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-all ${
+              isActive('/bookshelf') 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+            }`}
             onClick={() => navigate('/bookshelf')}
           >
             书架
           </button>
           <button 
-            className={`nav-link ${isActive('/settings') ? 'active' : ''}`}
+            className={`px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-all ${
+              isActive('/settings') 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+            }`}
             onClick={() => navigate('/settings')}
           >
             设置

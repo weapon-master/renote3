@@ -1,14 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
-  Node,
-  Edge,
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Annotation, NoteConnection } from '../types';
+import { Annotation } from '../types';
 import NoteFlow from './note/NoteFlow';
-import { debounce } from 'lodash-es';
-import './NotesView.css';
+
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
 import { useConnectionStore } from '@/store/connection';
@@ -26,13 +23,12 @@ const defaultPosition = {
   y: 150,
 }
 const NotesView: React.FC<NotesViewProps> = ({
-  // annotations, 
   onCardClick,
   isVisible,
   width = 400,
+  bookId,
 }) => {
   const book = useBookStore(state => state.currBook)
-  const bookId = book.id
   const annotations = useAnnotationStore(state => state.annotations);
   const cards = useAnnotationStore(state => state.cards);
   const loadConnectionsByBookId = useConnectionStore(state => state.loadConnectionsByBookId);
@@ -76,8 +72,12 @@ const NotesView: React.FC<NotesViewProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="notes-view" style={{ width: `${width}px` }}>
-      <ReactFlowProvider><NoteFlow initialNodes={initialNodes} initialEdges={initialEdges} /></ReactFlowProvider>
+    <div className="flex flex-col h-full bg-white border-l border-gray-200 flex-shrink-0" style={{ width: `${width}px` }}>
+      <div className="flex-1 w-full h-full">
+        <ReactFlowProvider>
+          <NoteFlow initialNodes={initialNodes} initialEdges={initialEdges} />
+        </ReactFlowProvider>
+      </div>
     </div>
   );
 };

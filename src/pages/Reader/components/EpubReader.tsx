@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Annotation, Book } from '../../../types';
 import { ReactReader } from 'react-reader';
 import { AnnotationColor } from '../../../const/annotation-color';
-import './EpubReader.css';
+
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
 import { Rendition } from 'epubjs';
@@ -915,29 +915,33 @@ const EpubReader: React.FC<EpubReaderProps> = ({
 
     if (!epubUrl) {
       return (
-        <div className="epub-error">
-          <p>无法生成EPUB读取地址</p>
-          <p>文件路径: {book.filePath}</p>
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+            <h3 className="text-lg font-semibold text-red-800 mb-2">无法生成EPUB读取地址</h3>
+            <p className="text-red-600 mb-2">文件路径: {book.filePath}</p>
+          </div>
         </div>
       );
     }
 
     return (
-      <div className="epub-reader">
-        <ReactReader
-          url={epubUrl}
-          location={readingProgress}
-          locationChanged={handleLocationChange}
-          swipeable={false}
-          showToc
-          getRendition={handleRendition}
-        />
+      <div className="w-full h-full relative bg-white">
+        <div className="w-full h-full">
+          <ReactReader
+            url={epubUrl}
+            location={readingProgress}
+            locationChanged={handleLocationChange}
+            swipeable={false}
+            showToc
+            getRendition={handleRendition}
+          />
+        </div>
         
         {/* Manual Description Generation Button */}
         {showDescriptionButton && !book.description && (
-          <div className="description-generation-button-container">
+          <div className="fixed top-4 right-4 z-40">
             <button
-              className="description-generation-button"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2 font-medium"
               onClick={handleManualDescriptionGeneration}
               title="生成书籍描述"
             >
@@ -949,7 +953,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
           pendingSelection &&
           createPortal(
             <div
-              className="selection-toolbar"
+              className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 flex items-center gap-2"
               ref={toolbarRef}
               style={{
                 position: 'fixed',
@@ -958,18 +962,18 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 width: 280,
               }}
             >
-              <div className="color-picker-container">
+              <div className="relative">
                 <button
-                  className="color-picker-btn"
+                  className="w-8 h-8 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
                   style={{ backgroundColor: selectedColor }}
                   onClick={() => setShowColorPicker(!showColorPicker)}
                 />
                 {showColorPicker && (
-                  <div className="color-picker-dropdown">
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 grid grid-cols-4 gap-1 z-50">
                     {Object.entries(AnnotationColor).map(([name, color]) => (
                       <button
                         key={name}
-                        className="color-option"
+                        className="w-6 h-6 rounded border border-gray-300 hover:border-gray-400 transition-colors"
                         style={{ backgroundColor: color }}
                         onClick={() => {
                           setSelectedColor(color);
@@ -982,7 +986,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 )}
               </div>
               <button
-                className="toolbar-btn"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors"
                 onClick={() => {
                   setShowNoteModal(true);
                 }}
@@ -990,7 +994,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 添加批注
               </button>
               <button
-                className="toolbar-btn secondary"
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors"
                 onClick={handleGenerateExplanation}
               >
                 解释
@@ -1001,7 +1005,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
         {clickToolbar &&
           createPortal(
             <div
-              className="selection-toolbar"
+              className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 flex flex-col gap-1"
               ref={clickToolbarRef}
               style={{
                 position: 'fixed',
@@ -1011,7 +1015,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
               }}
             >
               <button
-                className="toolbar-btn"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
                 onClick={() => {
                   setPendingSelection({
                     id: clickToolbar.annotation.id,
@@ -1030,7 +1034,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 编辑
               </button>
               <button
-                className="toolbar-btn"
+                className="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
                 onClick={() => {
                   setNotePopup({
                     top: clickToolbar.top,
@@ -1043,7 +1047,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 查看
               </button>
               <button
-                className="toolbar-btn secondary"
+                className="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
                 onClick={() => {
                   removeAnnotation(clickToolbar.annotation.id);
                   setClickToolbar(null);
@@ -1057,7 +1061,7 @@ const EpubReader: React.FC<EpubReaderProps> = ({
         {notePopup &&
           createPortal(
             <div
-              className="note-popup"
+              className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
               style={{
                 position: 'fixed',
                 top: notePopup.top,
@@ -1065,33 +1069,35 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 width: 280,
               }}
             >
-              <div className="note-popup-header">
-                <span>批注</span>
+              <div className="flex justify-between items-center p-3 bg-gray-50 border-b border-gray-200">
+                <span className="font-medium text-gray-800">批注</span>
                 <button
-                  className="note-popup-close"
+                  className="text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-200 transition-colors"
                   onClick={() => setNotePopup(null)}
                 >
                   ✕
                 </button>
               </div>
-              <div className="note-popup-text">{notePopup.annotation.text}</div>
-              <div className="note-popup-note">{notePopup.annotation.note}</div>
+              <div className="p-3 text-sm text-gray-700 border-b border-gray-100">{notePopup.annotation.text}</div>
+              <div className="p-3 text-sm text-gray-800">{notePopup.annotation.note}</div>
             </div>,
             document.body,
           )}
         {/* Simple note modal */}
         {showNoteModal && (
-          <div className="note-modal-backdrop">
-            <div className="note-modal">
-              <h4>{pendingSelection?.id ? '编辑批注' : '添加批注'}</h4>
-              <div className="note-selected-text">{pendingSelection?.text}</div>
-              <div className="note-color-selector">
-                <label>选择颜色:</label>
-                <div className="color-options">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-md p-6">
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">{pendingSelection?.id ? '编辑批注' : '添加批注'}</h4>
+              <div className="bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-700 mb-4">{pendingSelection?.text}</div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">选择颜色:</label>
+                <div className="grid grid-cols-6 gap-2">
                   {Object.entries(AnnotationColor).map(([name, color]) => (
                     <button
                       key={name}
-                      className={`color-option ${selectedColor === color ? 'selected' : ''}`}
+                      className={`w-8 h-8 rounded border-2 transition-colors ${
+                        selectedColor === color ? 'border-blue-500' : 'border-gray-300 hover:border-gray-400'
+                      }`}
                       style={{ backgroundColor: color }}
                       onClick={() => setSelectedColor(color)}
                       title={name}
@@ -1103,13 +1109,18 @@ const EpubReader: React.FC<EpubReaderProps> = ({
                 placeholder="输入你的笔记..."
                 value={noteDraft}
                 onChange={(e) => setNoteDraft(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-blue-500 mb-4"
+                rows={4}
               />
-              <div className="note-actions">
-                <button className="nav-btn" onClick={saveAnnotation}>
+              <div className="flex gap-3 justify-end">
+                <button 
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+                  onClick={saveAnnotation}
+                >
                   保存
                 </button>
                 <button
-                  className="nav-btn"
+                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
                   onClick={() => {
                     setShowNoteModal(false);
                     setPendingSelection(null);
