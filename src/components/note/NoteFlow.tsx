@@ -48,21 +48,31 @@ export default function NoteFlow({
   onNodesUpdate,
   onEdgesUpdate,
 }: NoteFlowProps) {
-  const book = useBookStore(state => state.currBook);
-  const updateCard = useAnnotationStore(state => state.updateCard)
-  const batchCreateConnections = useConnectionStore(state => state.batchCreateConnections);
-  const deleteConnection = useConnectionStore(state => state.deleteConnection);
-  const updateConnection = useConnectionStore(state => state.updateConnection);
-  const checkConnectionExists = useConnectionStore(state => state.checkConnectionExists);
-  const updateCanvasCenterPosition = useAnnotationStore(state => state.updateCanvasCenterPosition);
+  const book = useBookStore((state) => state.currBook);
+  const updateCard = useAnnotationStore((state) => state.updateCard);
+  const createConnection = useConnectionStore(
+    (state) => state.createConnection,
+  );
+  const deleteConnection = useConnectionStore(
+    (state) => state.deleteConnection,
+  );
+  const updateConnection = useConnectionStore(
+    (state) => state.updateConnection,
+  );
+  const checkConnectionExists = useConnectionStore(
+    (state) => state.checkConnectionExists,
+  );
+  const updateCanvasCenterPosition = useAnnotationStore(
+    (state) => state.updateCanvasCenterPosition,
+  );
   const [nodes, setNodes, _onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, _onEdgesChange] = useEdgesState(initialEdges);
-  const { getIntersectingNodes } = useReactFlow()
-  const getCanvasCenter = useCanvasCenter()
-  const canvasCenter = getCanvasCenter()
-  const {x, y} = canvasCenter;
+  const { getIntersectingNodes } = useReactFlow();
+  const getCanvasCenter = useCanvasCenter();
+  const canvasCenter = getCanvasCenter();
+  const { x, y } = canvasCenter;
   useEffect(() => {
-    updateCanvasCenterPosition({ x, y});
+    updateCanvasCenterPosition({ x, y });
   }, [x, y]);
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -97,7 +107,7 @@ export default function NoteFlow({
         const newEdge = {
           ...connection,
           type: 'noteEdge',
-          data: { description: '' }
+          data: { description: '' },
         };
         const newEdges = addEdge(newEdge, currentEdges);
         // 立即触发保存回调
@@ -112,8 +122,8 @@ export default function NoteFlow({
     console.log('NoteFlow: initialNodes changed', {
       initialNodesLength: initialNodes.length,
       nodesLength: nodes.length,
-      initialNodeIds: initialNodes.map(n => n.id),
-      nodeIds: nodes.map(n => n.id)
+      initialNodeIds: initialNodes.map((n) => n.id),
+      nodeIds: nodes.map((n) => n.id),
     });
 
     // 简化逻辑：直接设置节点，让React Flow处理位置保持
@@ -126,61 +136,70 @@ export default function NoteFlow({
   }, [initialEdges, setEdges]);
 
   const onNodeDrag = (e: React.MouseEvent<Element, MouseEvent>, n: Node) => {
-     const intersections = getIntersectingNodes(n).map(n => n.id).filter(id => !checkConnectionExists(id, n.id));
-     setNodes(ns => 
-      ns.map(n => ({
+    const intersections = getIntersectingNodes(n)
+      .map((n) => n.id)
+      .filter((id) => !checkConnectionExists(id, n.id));
+    setNodes((ns) =>
+      ns.map((n) => ({
         ...n,
         data: {
           ...n.data,
-          highlight: intersections.includes(n.id)
-        }
-      }))
-     )
-  }
+          highlight: intersections.includes(n.id),
+        },
+      })),
+    );
+  };
 
-  const onNodeDragStop = (e: React.MouseEvent<Element, MouseEvent>, n: Node) => {
-    updateCard(n.id, { position: n.position })
-    const intersections = getIntersectingNodes(n)
-    
+  const onNodeDragStop = async (
+    e: React.MouseEvent<Element, MouseEvent>,
+    n: Node,
+  ) => {
+    updateCard(n.id, { position: n.position });
+    const intersections = getIntersectingNodes(n);
+
     // 创建边缘
-    intersections.forEach((sourceNode) => {
-      if (checkConnectionExists(sourceNode.id, n.id)) {
-        return;
-      }
-      const newEdge: Edge = {
-        id: `${sourceNode.id}-${n.id}`,
-        source: sourceNode.id,
-        target: n.id,
-        type: 'noteEdge',
-        data: { description: '' }
-      }
-      setEdges(eds => addEdge(newEdge, eds))
-    })
-    
+    const newEdges = intersections
+      .filter((sourceNode) => {
+        return !checkConnectionExists(sourceNode.id, n.id);
+      })
+      .map((sourceNode) => {
+        const newEdge = {
+          id: '',
+          source: sourceNode.id,
+          target: n.id,
+          type: 'noteEdge',
+          data: { description: '' },
+        };
+        return newEdge;
+      });
+
     // 创建连接记录
-    const newConnections: NoteConnection[] = intersections.map(srcNode => ({
-      id: `${srcNode.id}-${n.id}`,
-      bookId: book.id,
-      fromCardId: srcNode.id,
-      toCardId: n.id,
-      description: '',
-    })).filter(c => !checkConnectionExists(c.fromCardId, c.toCardId));
-    if (!newConnections.length) {
+    if (!newEdges.length) {
       return;
     }
-    batchCreateConnections(book.id, newConnections)
-  }
+    const newEdge = newEdges[0];
+    const newConnection = {
+      bookId: book.id,
+      fromCardId: newEdge.source,
+      toCardId: n.id,
+      description: '',
+    };
+    const newConn = await createConnection(newConnection);
+    newEdge.id = newConn.id;
+    // @ts-ignore
+    setEdges((eds) => addEdge(newEdge, eds));
+  };
 
   const onEdgeContextMenu = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
       event.preventDefault(); // prevent default browser menu
       setEdges((eds) => {
-        const newEdges = eds.filter((e) => e.id !== edge.id)
+        const newEdges = eds.filter((e) => e.id !== edge.id);
         deleteConnection(edge.id);
-        return newEdges
+        return newEdges;
       });
     },
-    [setEdges]
+    [setEdges],
   );
 
   // 监听边缘描述更新事件
@@ -188,50 +207,56 @@ export default function NoteFlow({
     const handleEdgeDescriptionUpdate = (event: CustomEvent) => {
       const { edgeId, description } = event.detail;
       updateConnection(edgeId, { description });
-      
+
       // 更新本地边缘状态
       setEdges((eds) =>
         eds.map((edge) =>
           edge.id === edgeId
             ? { ...edge, data: { ...edge.data, description } }
-            : edge
-        )
+            : edge,
+        ),
       );
     };
 
-    window.addEventListener('edge-description-update', handleEdgeDescriptionUpdate as EventListener);
-    
+    window.addEventListener(
+      'edge-description-update',
+      handleEdgeDescriptionUpdate as EventListener,
+    );
+
     return () => {
-      window.removeEventListener('edge-description-update', handleEdgeDescriptionUpdate as EventListener);
+      window.removeEventListener(
+        'edge-description-update',
+        handleEdgeDescriptionUpdate as EventListener,
+      );
     };
   }, [setEdges, updateConnection]);
   return (
     <div className="notes-canvas">
       {/* <ReactFlowProvider> */}
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          // onDrop = {onDrop}
-          onNodeDragStop={onNodeDragStop}
-          onNodeDrag={onNodeDrag}
-          onEdgeContextMenu={onEdgeContextMenu}
-          fitView
-          attributionPosition="bottom-left"
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls />
-          <MiniMap
-            nodeStrokeColor="#1a192b"
-            nodeColor="#fff"
-            nodeBorderRadius={2}
-          />
-        </ReactFlow>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        // onDrop = {onDrop}
+        onNodeDragStop={onNodeDragStop}
+        onNodeDrag={onNodeDrag}
+        onEdgeContextMenu={onEdgeContextMenu}
+        fitView
+        attributionPosition="bottom-left"
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        <Controls />
+        <MiniMap
+          nodeStrokeColor="#1a192b"
+          nodeColor="#fff"
+          nodeBorderRadius={2}
+        />
+      </ReactFlow>
       {/* </ReactFlowProvider> */}
     </div>
   );

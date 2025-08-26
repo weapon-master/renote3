@@ -37,6 +37,8 @@ const NotesView: React.FC<NotesViewProps> = ({
   const cards = useAnnotationStore(state => state.cards);
   const loadConnectionsByBookId = useConnectionStore(state => state.loadConnectionsByBookId);
   const connections = useConnectionStore(state => state.connections);
+  console.log('debug connections', connections);
+  console.log('debug cards', cards);
   useEffect(() => {
     loadConnectionsByBookId(bookId);
   }, [bookId])
@@ -75,21 +77,6 @@ const NotesView: React.FC<NotesViewProps> = ({
 
   return (
     <div className="notes-view" style={{ width: `${width}px` }}>
-      <div className="notes-header">
-        <h3>Notes View</h3>
-      </div>
-
-      <div className="notes-instructions">
-        <p>💡 <strong>Instructions:</strong></p>
-        <ul>
-          <li>Click cards to navigate to notes in the reader</li>
-          <li>Drag cards to reposition them</li>
-          <li><strong>Ctrl + click and drag</strong> from one card to another to connect them</li>
-          <li>Click connections to edit direction and description</li>
-          <li>Use mouse wheel to zoom, drag to pan</li>
-        </ul>
-      </div>
-
       <ReactFlowProvider><NoteFlow initialNodes={initialNodes} initialEdges={initialEdges} /></ReactFlowProvider>
     </div>
   );

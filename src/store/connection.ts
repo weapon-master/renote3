@@ -7,7 +7,7 @@ type ConnectionStore = {
   connections: Connection[];
   bookId: string;
   loadConnectionsByBookId: (bookId: string) => Promise<void>;
-  createConnection: (connection: NewConnection) => Promise<void>;
+  createConnection: (connection: NewConnection) => Promise<Connection>;
   batchCreateConnections: (
     bookId: string,
     connections: Connection[],
@@ -31,7 +31,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
   createConnection: async (connection: NewConnection) => {
     const newConn = await window.electron.db.createNoteConnection(connection);
     set((state) => ({ connections: [...state.connections, newConn] }));
-    // loadConnectionsByBookId(bookId);
+    return newConn;
   },
   batchCreateConnections: async (bookId: string, connections: Connection[]) => {
     const { success, error } =
