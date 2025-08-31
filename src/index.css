@@ -1,3 +1,17 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-highlight-yellow: #ffff00;
+  --color-mint-green: #00ff7f;
+  --color-sky-blue: #87ceeb;
+  --color-light-pink: #ffc0cb;
+  --color-lavender: #e6e6fa;
+  --color-light-orange: #ffa500;
+  --color-cyan: #00ffff;
+  --color-peach: #ffdab9;
+  --color-cream: #fffdd0;
+}
+
 body {
   margin: 0;
   padding: 0;

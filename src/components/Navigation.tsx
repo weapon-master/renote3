@@ -1,6 +1,8 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import '../components/Navigation.css';
+import Button from './base/button';
+import { GiBookshelf } from 'react-icons/gi';
+import { IoIosSettings } from 'react-icons/io';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -12,25 +14,27 @@ const Navigation: React.FC = () => {
 
   return (
     <nav className="navigation">
-      <div className="nav-container">
-        <div className="nav-brand" onClick={() => navigate('/bookshelf')}>
+      <div className="nav-container flex justify-between items-center border-b border-gray-200">
+        <div
+          className="nav-brand text-2xl font-bold"
+          onClick={() => navigate('/bookshelf')}
+        >
           <span className="brand-icon">📚</span>
           <span className="brand-text">Renote3</span>
         </div>
-        
-        <div className="nav-links">
-          <button 
-            className={`nav-link ${isActive('/bookshelf') ? 'active' : ''}`}
+
+        <div className="nav-links flex items-center gap-2 px-4 py-2">
+          <Button
             onClick={() => navigate('/bookshelf')}
-          >
-            书架
-          </button>
-          <button 
-            className={`nav-link ${isActive('/settings') ? 'active' : ''}`}
+            type="icon"
+            icon={<GiBookshelf size={24} />}
+          />
+
+          <Button
+            type="icon"
             onClick={() => navigate('/settings')}
-          >
-            设置
-          </button>
+            icon={<IoIosSettings size={24} />}
+          />
         </div>
       </div>
     </nav>

@@ -4,7 +4,6 @@ import Navigation from './components/Navigation';
 import BookShelf from './pages/BookShelf';
 import Reader from './pages/Reader';
 import Settings from './pages/Settings';
-import './App.css';
 
 const App: React.FC = () => {
 
