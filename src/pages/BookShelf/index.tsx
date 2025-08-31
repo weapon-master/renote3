@@ -2,17 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookItem from './components/BookItem';
 import { Book } from '../../types';
-import './BookShelf.css';
 import { useBookStore } from '@/store/book';
+import Button from '@/components/base/button';
+import ImportBook from '@/components/base/button/ImportBook';
 
 const BookShelf: React.FC = () => {
-//   const [books, setBooks] = useState<Book[]>([]);
-  const books = useBookStore(state => state.books);
-  const loadBooks = useBookStore(state => state.loadBooks);
-  const isLoading = useBookStore(state => state.loading);
-  const importBooks = useBookStore(state => state.importBooks);
-  const deleteBook = useBookStore(state => state.deleteBook);
-  const updateBook = useBookStore(state => state.updateBook);
+  //   const [books, setBooks] = useState<Book[]>([]);
+  const books = useBookStore((state) => state.books);
+  const loadBooks = useBookStore((state) => state.loadBooks);
+  const isLoading = useBookStore((state) => state.loading);
+  const importBooks = useBookStore((state) => state.importBooks);
+  const deleteBook = useBookStore((state) => state.deleteBook);
+  const updateBook = useBookStore((state) => state.updateBook);
   const navigate = useNavigate();
 
   // 组件挂载时加载书籍数据
@@ -25,7 +26,7 @@ const BookShelf: React.FC = () => {
   const handleImportBooks = () => {
     console.log('Window object:', window);
     console.log('Window.electron:', (window as any).electron);
-    
+
     const electron = (window as any).electron;
     if (electron && electron.ipcRenderer) {
       console.log('Sending import-books message to main process');
@@ -44,18 +45,18 @@ const BookShelf: React.FC = () => {
   const handleEditBookTitle = async (bookId: string, newTitle: string) => {
     try {
       const electron = (window as any).electron;
-      await updateBook(bookId, { title: newTitle })
+      await updateBook(bookId, { title: newTitle });
     } catch (error) {
       console.error('更新书籍时出错:', error);
     }
   };
 
   const handleReorderBooks = (draggedId: string, targetId: string) => {
-    const draggedIndex = books.findIndex(book => book.id === draggedId);
-    const targetIndex = books.findIndex(book => book.id === targetId);
-    
+    const draggedIndex = books.findIndex((book) => book.id === draggedId);
+    const targetIndex = books.findIndex((book) => book.id === targetId);
+
     if (draggedIndex === -1 || targetIndex === -1) return;
-    
+
     const newBooks = [...books];
     const [movedBook] = newBooks.splice(draggedIndex, 1);
     newBooks.splice(targetIndex, 0, movedBook);
@@ -68,7 +69,7 @@ const BookShelf: React.FC = () => {
     console.log('Setting up IPC listeners');
     console.log('Window object:', window);
     console.log('Window.electron:', (window as any).electron);
-    
+
     const electron = (window as any).electron;
     if (electron && electron.ipcRenderer) {
       console.log('IPC renderer available, setting up listener');
@@ -76,9 +77,9 @@ const BookShelf: React.FC = () => {
         console.log('Received books from main process:', importedBooks);
         importBooks(importedBooks);
       };
-      
+
       electron.ipcRenderer.on('import-books-result', handler);
-      
+
       // Cleanup listener on component unmount
       return () => {
         console.log('Cleaning up IPC listeners');
@@ -96,10 +97,6 @@ const BookShelf: React.FC = () => {
   if (isLoading) {
     return (
       <div className="page" id="book-shelf">
-        <header>
-          <h1>书架</h1>
-          <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
-        </header>
         <div className="loading">正在加载书籍...</div>
       </div>
     );
@@ -107,15 +104,10 @@ const BookShelf: React.FC = () => {
 
   return (
     <div className="page" id="book-shelf">
-      <header>
-        <h1>书架</h1>
-        <div className="header-buttons">
-          <button id="import-btn" onClick={handleImportBooks}>导入书籍</button>
-          <button id="settings-btn" onClick={() => navigate('/settings')}>设置</button>
-        </div>
-      </header>
-      
-      <div id="books-container">
+      <div
+        id="books-container"
+        className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-5 py-5 content-start justify-center min-h-fit overflow-y-auto max-w-full"
+      >
         {books.length === 0 ? (
           <div className="empty-state">
             <p>书架还是空的，点击"导入书籍"开始添加你的第一本书吧！</p>

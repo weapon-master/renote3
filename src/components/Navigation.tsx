@@ -1,17 +1,12 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Button from './base/button';
-import { GiBookshelf } from 'react-icons/gi';
-import { IoIosSettings } from 'react-icons/io';
-
+import NavBookShelf from './base/button/NavBookShelf';
+import NavSettings from './base/button/NavSettings';
+import ImportBook from './base/button/ImportBook';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
-
+  const pathname = location.pathname;
   return (
     <nav className="navigation">
       <div className="nav-container flex justify-between items-center border-b border-gray-200">
@@ -24,17 +19,9 @@ const Navigation: React.FC = () => {
         </div>
 
         <div className="nav-links flex items-center gap-2 px-4 py-2">
-          <Button
-            onClick={() => navigate('/bookshelf')}
-            type="icon"
-            icon={<GiBookshelf size={24} />}
-          />
-
-          <Button
-            type="icon"
-            onClick={() => navigate('/settings')}
-            icon={<IoIosSettings size={24} />}
-          />
+          { pathname === '/bookshelf' && <ImportBook /> }
+          { pathname !== '/bookshelf' && <NavBookShelf /> }
+          <NavSettings   />
         </div>
       </div>
     </nav>
