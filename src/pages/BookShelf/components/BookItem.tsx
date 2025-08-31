@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
+import { CiEdit } from "react-icons/ci";
+import { IoMdClose } from "react-icons/io";
 import { Book } from '../../../types';
-import '../components/BookItem.css';
 
 interface BookItemProps {
   book: Book;
@@ -58,14 +59,14 @@ const BookItem: React.FC<BookItemProps> = ({
     e.dataTransfer.setData('bookId', book.id);
     setTimeout(() => {
       if (bookRef.current) {
-        bookRef.current.classList.add('dragging');
+        bookRef.current.classList.add('opacity-50', 'scale-105');
       }
     }, 0);
   };
 
   const handleDragEnd = () => {
     if (bookRef.current) {
-      bookRef.current.classList.remove('dragging');
+      bookRef.current.classList.remove('opacity-50', 'scale-105');
     }
   };
 
@@ -81,26 +82,26 @@ const BookItem: React.FC<BookItemProps> = ({
     }
     
     if (bookRef.current) {
-      bookRef.current.classList.remove('drag-over');
+      bookRef.current.classList.remove('border-2', 'border-dashed', 'border-green-500');
     }
   };
 
   const handleDragEnter = () => {
     if (bookRef.current) {
-      bookRef.current.classList.add('drag-over');
+      bookRef.current.classList.add('border-2', 'border-dashed', 'border-green-500');
     }
   };
 
   const handleDragLeave = () => {
     if (bookRef.current) {
-      bookRef.current.classList.remove('drag-over');
+      bookRef.current.classList.remove('border-2', 'border-dashed', 'border-green-500');
     }
   };
 
   return (
     <div
       ref={bookRef}
-      className="book"
+      className="flex flex-col items-center p-2.5 bg-white rounded-lg shadow-md cursor-pointer transition-transform duration-200 relative select-none h-55 min-h-55 max-h-55 box-border hover:-translate-y-1 group"
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -110,35 +111,36 @@ const BookItem: React.FC<BookItemProps> = ({
       onDragLeave={handleDragLeave}
       onDoubleClick={() => onBookSelect(book)}
     >
-      <div className="book-cover">
+      <div className="w-25 h-32.5 bg-gray-300 border border-gray-300 flex items-center justify-center mb-2.5 rounded overflow-hidden flex-shrink-0">
         {book.coverPath ? (
-          <img src={book.coverPath} alt={book.title} />
+          <img src={book.coverPath} alt={book.title} className="max-w-full max-h-full object-cover" />
         ) : (
-          <div className="book-cover-placeholder">{book.title.charAt(0)}</div>
+          <div className="text-5xl font-bold text-gray-500">{book.title.charAt(0)}</div>
         )}
       </div>
       
       {isEditing ? (
-        <div className="book-title-edit">
+        <div className="flex flex-col w-full items-center">
           <input
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
             onKeyDown={handleKeyDown}
             autoFocus
+            className="w-11/12 p-1.5 mb-1.5 border border-gray-300 rounded"
           />
-          <div className="edit-actions">
-            <button onClick={handleSaveEdit}>✓</button>
-            <button onClick={handleCancelEdit}>✕</button>
+          <div className="flex gap-1.5">
+            <button onClick={handleSaveEdit} className="px-2 py-0.5 text-xs">✓</button>
+            <button onClick={handleCancelEdit} className="px-2 py-0.5 text-xs">✕</button>
           </div>
         </div>
       ) : (
-        <p className="book-title">{book.title}</p>
+        <p className="text-sm text-center m-0 px-1.5 break-words overflow-hidden flex-1 flex items-center justify-center min-h-10 line-clamp-2">{book.title}</p>
       )}
       
-      <div className="book-actions">
-        <button onClick={handleEdit}>✏</button>
-        <button onClick={handleDelete}>✕</button>
+      <div className="absolute top-1.5 right-1.5 hidden group-hover:flex">
+        <button onClick={handleEdit} className="p-1.5 text-s mx-0.5 cursor-pointer bg-black bg-opacity-50 text-white rounded"><CiEdit /></button>
+        <button onClick={handleDelete} className="p-1.5 text-s mx-0.5 cursor-pointer bg-black bg-opacity-50 text-white rounded"><IoMdClose /></button>
       </div>
     </div>
   );
