@@ -1,7 +1,7 @@
 .epub-reader {
   display: flex;
   flex-direction: column;
-  height: 90vh;
+  height: 100%;
   background-color: #f8f9fa;
 }
 

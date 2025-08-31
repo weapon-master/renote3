@@ -6,6 +6,8 @@ import NotesView from '../../components/NotesView';
 import './Reader.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
+import ToggleNoteView from '@/components/base/button/ToggleNoteView';
+import { useNoteViewStore } from '@/store/noteView';
 
 const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
@@ -18,7 +20,8 @@ const Reader: React.FC = () => {
   const annotations = useAnnotationStore(state => state.annotations)
   const loadAnnotationsByBook = useAnnotationStore(state => state.loadAnnotationsByBook)
   // const [book, setBook] = useState<Book | null>(null);
-  const [showNotesView, setShowNotesView] = useState(false);
+  // const [showNotesView, setShowNotesView] = useState(false);
+  const showNotesView = useNoteViewStore((state) => state.showNotesView);
   // const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [notesViewWidth, setNotesViewWidth] = useState(() => {
     const saved = localStorage.getItem('notes-view-width');
@@ -57,9 +60,6 @@ const Reader: React.FC = () => {
     navigate('/bookshelf');
   };
 
-  const handleNotesViewToggle = () => {
-    setShowNotesView(!showNotesView);
-  };
 
   const handleCardClick = (annotation: Annotation) => {
     // Navigate to the annotation location in the reader
@@ -140,7 +140,7 @@ const Reader: React.FC = () => {
   if (!book) {
     return (
       <div
-        className="page"
+        className="h-full"
         id="reader"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -158,23 +158,12 @@ const Reader: React.FC = () => {
 
   return (
     <div
-      className="page"
+      className="h-full"
       id="reader"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleMouseLeave}
     >
-      <header className={`reader-header ${showHeader ? 'show' : 'hide'}`}>
-        <button id="back-btn" onClick={handleBack}>返回书架</button>
-        <h1 id="reader-title">{book.title}</h1>
-        <button
-          id="notes-toggle-btn"
-          onClick={handleNotesViewToggle}
-          className={showNotesView ? 'active' : ''}
-        >
-          {showNotesView ? '📝 隐藏笔记' : '📝 显示笔记'}
-        </button>
-      </header>
       <div id="reader-content" className={`${showNotesView ? 'with-notes' : ''} ${isResizing ? 'resizing' : ''}`}>
         <div className="reader-main">
           {book.filePath.toLowerCase().endsWith('.epub') ? (

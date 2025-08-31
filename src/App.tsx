@@ -9,7 +9,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="app">
+      <div className="app h-[100vh]">
         <Navigation />
         <Routes>
           <Route path="/" element={<Navigate to="/bookshelf" replace />} />
