@@ -22,7 +22,7 @@ type BookStore = {
 export const useBookStore = create<BookStore>((set, get) => ({
   books: [],
   currBook: null,
-  loading: false,
+  loading: true,
   selectBook: (bookId: string) => {
     const currBookId = bookId;
     set({

@@ -5,6 +5,8 @@ import { Book } from '../../types';
 import { useBookStore } from '@/store/book';
 import Button from '@/components/base/button';
 import ImportBook from '@/components/base/button/ImportBook';
+import Loading from '@/components/base/Loading';
+import Empty from '@/components/base/Empty';
 
 const BookShelf: React.FC = () => {
   //   const [books, setBooks] = useState<Book[]>([]);
@@ -96,35 +98,35 @@ const BookShelf: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page" id="book-shelf">
-        <div className="loading">正在加载书籍...</div>
+      <div className="h-full" id="book-shelf">
+        <Loading text="Loading..." />
       </div>
     );
   }
-
+  if (books.length === 0) {
+    return (
+      <div className="h-full" id="book-shelf">
+        <Empty text="Book Shelf is empty. Import books now!" />
+      </div>
+    );
+  }
   return (
-    <div className="page" id="book-shelf">
+    <div className="h-full" id="book-shelf">
       <div
         id="books-container"
         className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-5 py-5 content-start justify-center min-h-fit overflow-y-auto max-w-full"
       >
-        {books.length === 0 ? (
-          <div className="empty-state">
-            <p>书架还是空的，点击"导入书籍"开始添加你的第一本书吧！</p>
-          </div>
-        ) : (
-          books.map((book, index) => (
-            <BookItem
-              key={book.id}
-              book={book}
-              index={index}
-              onBookSelect={handleBookSelect}
-              onDelete={handleDeleteBook}
-              onEditTitle={handleEditBookTitle}
-              onReorder={handleReorderBooks}
-            />
-          ))
-        )}
+        {books.map((book, index) => (
+          <BookItem
+            key={book.id}
+            book={book}
+            index={index}
+            onBookSelect={handleBookSelect}
+            onDelete={handleDeleteBook}
+            onEditTitle={handleEditBookTitle}
+            onReorder={handleReorderBooks}
+          />
+        ))}
       </div>
     </div>
   );
