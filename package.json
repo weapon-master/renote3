@@ -40,6 +40,12 @@
     "vite": "^5.4.19"
   },
   "dependencies": {
+    "@heroui/checkbox": "^2.3.25",
+    "@heroui/modal": "^2.2.22",
+    "@heroui/react": "^2.8.3",
+    "@heroui/spinner": "^2.2.22",
+    "@heroui/system": "^2.4.21",
+    "@heroui/theme": "^2.4.21",
     "@langchain/core": "^0.3.72",
     "@langchain/deepseek": "^0.1.0",
     "@tailwindcss/postcss": "^4.1.12",
@@ -54,6 +60,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "epub2": "^3.0.2",
     "epubjs": "^0.3.93",
+    "framer-motion": "^12.23.12",
     "lodash-es": "^4.17.21",
     "node-stream-zip": "^1.15.0",
     "pdf-parse": "^1.1.1",

@@ -4,10 +4,13 @@ import NavBookShelf from './base/button/NavBookShelf';
 import NavSettings from './base/button/NavSettings';
 import ImportBook from './base/button/ImportBook';
 import ToggleNoteView from './base/button/ToggleNoteView';
+import GenerateSummary from './base/button/GenerateSummary';
+import { useBookStore } from '@/store/book';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
+  const currBook = useBookStore(state => state.currBook);
   return (
     <nav className="navigation">
       <div className="nav-container flex justify-between items-center border-b border-gray-200">
@@ -22,6 +25,7 @@ const Navigation: React.FC = () => {
         <div className="nav-links flex items-center gap-2 px-4 py-2">
           { pathname === '/bookshelf' && <ImportBook /> }
           { pathname.startsWith('/reader') && <ToggleNoteView /> }
+          { pathname.startsWith('/reader') && currBook && !currBook.description && <GenerateSummary /> }
           { pathname !== '/bookshelf' && <NavBookShelf /> }
           <NavSettings   />
         </div>

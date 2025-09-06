@@ -7,6 +7,7 @@ type BookStore = {
   books: Book[];
   loading: boolean;
   currBook: Book | null;
+  spineSelectorModalOpen: boolean;
   selectBook: (bookId: string) => void;
   loadBooks: () => Promise<void>;
   createBook: (book: NewBook) => Promise<void>;
@@ -17,12 +18,15 @@ type BookStore = {
     readingProgress: string,
   ) => Promise<void>;
   deleteBook: (bookId: string) => Promise<void>;
+  openSpineSelectorModal: () => void;
+  closeSpineSelectorModal: () => void;
 };
 
 export const useBookStore = create<BookStore>((set, get) => ({
   books: [],
   currBook: null,
   loading: true,
+  spineSelectorModalOpen: false,
   selectBook: (bookId: string) => {
     const currBookId = bookId;
     set({
@@ -90,5 +94,11 @@ export const useBookStore = create<BookStore>((set, get) => ({
     set((state) => ({
       books: state.books.filter((item) => item.id !== bookId),
     }));
+  },
+  openSpineSelectorModal: () => {
+    set(() => ({ spineSelectorModalOpen: true }));
+  },
+  closeSpineSelectorModal: () => {
+    set(() => ({ spineSelectorModalOpen: false }));
   },
 }));
