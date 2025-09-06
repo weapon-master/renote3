@@ -7,7 +7,13 @@ type BookStore = {
   books: Book[];
   loading: boolean;
   currBook: Book | null;
+  pendingSelection: {
+    id?: string;
+    cfiRange: string;
+    text: string;
+  } | null;
   spineSelectorModalOpen: boolean;
+  explanationModalOpen: boolean;
   selectBook: (bookId: string) => void;
   loadBooks: () => Promise<void>;
   createBook: (book: NewBook) => Promise<void>;
@@ -20,13 +26,22 @@ type BookStore = {
   deleteBook: (bookId: string) => Promise<void>;
   openSpineSelectorModal: () => void;
   closeSpineSelectorModal: () => void;
+  setPendingSelection: (pendingSelection: {
+    id?: string;
+    cfiRange: string;
+    text: string;
+  } | null) => void;
+  openExplanationModal: () => void;
+  closeExplanationModal: () => void;
 };
 
 export const useBookStore = create<BookStore>((set, get) => ({
   books: [],
   currBook: null,
   loading: true,
+  pendingSelection: null,
   spineSelectorModalOpen: false,
+  explanationModalOpen: false,
   selectBook: (bookId: string) => {
     const currBookId = bookId;
     set({
@@ -95,10 +110,23 @@ export const useBookStore = create<BookStore>((set, get) => ({
       books: state.books.filter((item) => item.id !== bookId),
     }));
   },
+  setPendingSelection: (pendingSelection: {
+    id?: string;
+    cfiRange: string;
+    text: string;
+  } | null) => {
+    set(() => ({ pendingSelection }));
+  },
   openSpineSelectorModal: () => {
     set(() => ({ spineSelectorModalOpen: true }));
   },
   closeSpineSelectorModal: () => {
     set(() => ({ spineSelectorModalOpen: false }));
+  },
+  openExplanationModal: () => {
+    set(() => ({ explanationModalOpen: true }));
+  },
+  closeExplanationModal: () => {
+    set(() => ({ explanationModalOpen: false }));
   },
 }));

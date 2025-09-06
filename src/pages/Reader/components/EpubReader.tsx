@@ -7,10 +7,9 @@ import './EpubReader.css';
 import { useBookStore } from '@/store/book';
 import { useAnnotationStore } from '@/store/annotation';
 import { Rendition } from 'epubjs';
-import ChapterSelector from '../../../components/ChapterSelector';
-import DescriptionConfirm from '../../../components/DescriptionConfirm';
 import ExplanationPopup from '../../../components/ExplanationPopup';
 import GenerateBookDescriptionModal from '@/components/book/modals/GenerateBookDescriptionModal';
+import GenerateExplanationModal from '@/components/book/modals/GenerateExplanationModal';
 
 interface EpubReaderProps {
   book: Book;
@@ -31,11 +30,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   // const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const renditionRef = useRef<Rendition>(null);
   const bookRef = useRef<Rendition['book']>(null);
-  const [pendingSelection, setPendingSelection] = useState<{
-    id?: string;
-    cfiRange: string;
-    text: string;
-  } | null>(null);
+  const pendingSelection = useBookStore(state => state.pendingSelection);
+  const setPendingSelection = useBookStore(state => state.setPendingSelection);
   const [noteDraft, setNoteDraft] = useState<string>('');
   const [showNoteModal, setShowNoteModal] = useState<boolean>(false);
   const [toolbarPosition, setToolbarPosition] = useState<{
@@ -64,21 +60,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({
     AnnotationColor.HighlightYellow,
   );
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
-  
-  // Description generation states
-  const [showChapterSelector, setShowChapterSelector] = useState<boolean>(false);
-  const [showDescriptionConfirm, setShowDescriptionConfirm] = useState<boolean>(false);
-  const [generatedDescription, setGeneratedDescription] = useState<string>('');
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
-  const [chapters, setChapters] = useState<Array<{index: number; title: string; href: string}>>([]);
-  const [showDescriptionButton, setShowDescriptionButton] = useState<boolean>(false);
-  
-  // Explanation states
-  const [showExplanationPopup, setShowExplanationPopup] = useState<boolean>(false);
-  const [explanation, setExplanation] = useState<string>('');
-  const [isGeneratingExplanation, setIsGeneratingExplanation] = useState<boolean>(false);
+  const openExplanationModal = useBookStore((state) => state.openExplanationModal);
   const updateReadingProgress = useBookStore((state) => state.updateReadingProgress)
-  const updateBook = useBookStore((state) => state.updateBook)
   const loadAnnotationsByBook = useAnnotationStore(state => state.loadAnnotationsByBook);
   const createAnnotation = useAnnotationStore(state => state.createAnnotation);
   const updateAnnotation = useAnnotationStore(state => state.updateAnnotation);
@@ -126,75 +109,10 @@ const EpubReader: React.FC<EpubReaderProps> = ({
   // Handle explanation generation
   const handleGenerateExplanation = async () => {
     if (!pendingSelection) return;
-    
-    setIsGeneratingExplanation(true);
-    setShowExplanationPopup(true);
-    
-    try {
-      const topic = book.topic || book.title || '通用';
-      const explanation = await window.electron.llm.explainText(topic, pendingSelection.text);
-      setExplanation(explanation);
-    } catch (error) {
-      console.error('Error generating explanation:', error);
-      setExplanation('生成解释时出现错误，请重试。');
-    } finally {
-      setIsGeneratingExplanation(false);
-    }
+    openExplanationModal();
   };
 
-  // Handle explanation acceptance
-  const handleAcceptExplanation = async (explanationText: string) => {
-    if (!pendingSelection) return;
-    
-    try {
-      const newAnnotation = await createAnnotation(book.id, {
-        bookId: book.id,
-        cfiRange: pendingSelection.cfiRange,
-        text: pendingSelection.text,
-        title: `解释笔记 ${annotations.length + 1}`,
-        note: explanationText,
-        color: {
-          rgba: AnnotationColor.MintGreen,
-          category: 'explanation'
-        },
-        createdAt: Date.now()
-      });
-      
-      // Clear UI state
-      setShowExplanationPopup(false);
-      setPendingSelection(null);
-      setToolbarPosition(null);
-      setExplanation('');
-      
-      console.log('解释笔记创建成功:', newAnnotation);
-    } catch (error) {
-      console.error('Error creating explanation annotation:', error);
-    }
-  };
 
-  // Handle explanation rejection
-  const handleRejectExplanation = () => {
-    setShowExplanationPopup(false);
-    setExplanation('');
-  };
-
-  // Handle explanation regeneration
-  const handleRegenerateExplanation = async () => {
-    if (!pendingSelection) return;
-    
-    setIsGeneratingExplanation(true);
-    
-    try {
-      const topic = book.topic || book.title || '通用';
-      const newExplanation = await window.electron.llm.explainText(topic, pendingSelection.text);
-      setExplanation(newExplanation);
-    } catch (error) {
-      console.error('Error regenerating explanation:', error);
-      setExplanation('重新生成解释时出现错误，请重试。');
-    } finally {
-      setIsGeneratingExplanation(false);
-    }
-  };
   // Expose navigation function to parent component
   useEffect(() => {
     if (onAnnotationClick) {
@@ -941,17 +859,8 @@ const EpubReader: React.FC<EpubReaderProps> = ({
         )}
         
         {/* Explanation Popup */}
-        <ExplanationPopup
-          isVisible={showExplanationPopup}
-          onClose={() => setShowExplanationPopup(false)}
-          onAccept={handleAcceptExplanation}
-          onReject={handleRejectExplanation}
-          onRegenerate={handleRegenerateExplanation}
-          explanation={explanation}
-          isLoading={isGeneratingExplanation}
-          selectedText={pendingSelection?.text || ''}
-        />
         <GenerateBookDescriptionModal bookRef={bookRef} />
+        <GenerateExplanationModal />
         {/* Sidebar notes list removed per request */}
 
       </div>

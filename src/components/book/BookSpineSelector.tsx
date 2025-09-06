@@ -54,6 +54,7 @@ const BookSpineSelector = ({
   }, [items]);
   return (
     <RadioGroup
+      className='max-h-[500px] overflow-y-auto'
       value={value}
       onValueChange={(value) => onSelect(itemMap.get(value) ?? null)}
     >
