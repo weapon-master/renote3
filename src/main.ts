@@ -37,12 +37,13 @@ if (started) {
 }
 
 // Disable features that cause errors in DevTools
+app.commandLine.appendSwitch('remote-debugging-port', '9222');
 app.commandLine.appendSwitch('disable-features', 'Autofill,TranslateUI');
 app.commandLine.appendSwitch('disable-web-security');
 
 // Database will be initialized in app.on('ready')
 
-const createWindow = () => {
+const createWindow = async () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -53,12 +54,17 @@ const createWindow = () => {
       contextIsolation: true,
     },
   });
-
+  const installExtension = require('electron-devtools-installer').default;
+  const { REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+  try {
+    await installExtension(REACT_DEVELOPER_TOOLS);
+    console.log('React DevTools installed!');
+  } catch (err) {
+    console.log('Failed to install React DevTools:', err);
+  }
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
   // Open the DevTools.
